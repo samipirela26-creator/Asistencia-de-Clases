@@ -1608,7 +1608,9 @@ input, textarea, button, select { font-family: inherit; }
   display: none;
   flex-direction: column;
   background: var(--c-bg);
+  height: 100dvh;
   overflow: hidden;
+  z-index: 800;
 }
 .sw-view.active { display: flex !important; }
 
