@@ -3,7 +3,7 @@
    Estrategia: Cache First para assets, Network First para datos
    ============================================================ */
 
-const CACHE_NAME    = 'asistapp-v10';
+const CACHE_NAME    = 'asistapp-v11';
 const OFFLINE_URL   = './offline.html';
 
 // Archivos que se precargan al instalar el SW
@@ -75,11 +75,12 @@ self.addEventListener('fetch', event => {
   if (request.method !== 'GET') return;
   if (url.protocol === 'chrome-extension:') return;
 
-  // Firebase / APIs externas → Network First
-  const isNetworkFirst = NETWORK_FIRST_PATTERNS.some(p => url.hostname.includes(p));
-  if (isNetworkFirst) {
-    event.respondWith(networkFirst(request));
-    return;
+  // Firebase / Firestore / APIs externas → NO interceptar.
+  // Estas conexiones (streaming en tiempo real) no se pueden cachear:
+  // si el SW las intercepta, rompe la sincronización. Las dejamos pasar directo.
+  const isFirebase = NETWORK_FIRST_PATTERNS.some(p => url.hostname.includes(p));
+  if (isFirebase) {
+    return; // el navegador maneja la petición sin el SW
   }
 
   // CDN de Google Fonts → Stale While Revalidate
