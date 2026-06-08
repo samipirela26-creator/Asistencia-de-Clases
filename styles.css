@@ -1638,6 +1638,15 @@ input, textarea, button, select { font-family: inherit; }
 .sw-header-title  { font-size: 15px; font-weight: 700; color: var(--c-text-1); }
 .sw-header-cls    { font-size: 11px; color: var(--c-text-2); margin-top: 1px; }
 
+/* Fase de tarjetas: debe ser flex column para que el escenario
+   (.sw-stage flex:1) reciba altura real; si no, las tarjetas se colapsan. */
+#sw-phase-cards {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
 /* ── Barra de progreso ───────────────────────── */
 .sw-progress-wrap {
   padding: 14px 20px 4px;
