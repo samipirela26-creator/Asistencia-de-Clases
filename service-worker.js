@@ -3,7 +3,7 @@
    Estrategia: Cache First para assets, Network First para datos
    ============================================================ */
 
-const CACHE_NAME    = 'asistapp-v9';
+const CACHE_NAME    = 'asistapp-v10';
 const OFFLINE_URL   = './offline.html';
 
 // Archivos que se precargan al instalar el SW
@@ -88,7 +88,15 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // Assets de la app → Cache First
+  // Archivos PROPIOS de la app (mismo origen) → Network First
+  // Así siempre se busca la versión más nueva; el caché solo se usa offline.
+  // Esto evita tener que borrar el historial para ver los cambios.
+  if (url.origin === self.location.origin) {
+    event.respondWith(networkFirst(request));
+    return;
+  }
+
+  // Librerías externas con versión fija (jsPDF, Firebase, etc.) → Cache First
   event.respondWith(cacheFirst(request));
 });
 
