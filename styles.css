@@ -1597,11 +1597,12 @@ input, textarea, button, select { font-family: inherit; }
    ════════════════════════════════════════════════ */
 
 .sw-view {
-  display: flex;
+  display: none;
   flex-direction: column;
   background: var(--c-bg);
   overflow: hidden;
 }
+.sw-view.active { display: flex !important; }
 
 /* ── Header ──────────────────────────────────── */
 .sw-header {
