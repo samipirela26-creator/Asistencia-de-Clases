@@ -1,0 +1,43 @@
+{
+  "name": "AsistApp — Control de Asistencia",
+  "short_name": "AsistApp",
+  "description": "App para llevar la asistencia de tus salones de clase",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#4361EE",
+  "theme_color": "#4361EE",
+  "lang": "es",
+  "categories": ["education", "productivity"],
+  "icons": [
+    { "src": "icons/icon-72x72.png",           "sizes": "72x72",   "type": "image/png" },
+    { "src": "icons/icon-96x96.png",           "sizes": "96x96",   "type": "image/png" },
+    { "src": "icons/icon-128x128.png",         "sizes": "128x128", "type": "image/png" },
+    { "src": "icons/icon-144x144.png",         "sizes": "144x144", "type": "image/png" },
+    { "src": "icons/icon-152x152.png",         "sizes": "152x152", "type": "image/png" },
+    { "src": "icons/icon-192x192.png",         "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-192x192-maskable.png","sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "icons/icon-384x384.png",         "sizes": "384x384", "type": "image/png" },
+    { "src": "icons/icon-512x512.png",         "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512x512-maskable.png","sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "Tomar Asistencia",
+      "short_name": "Asistencia",
+      "description": "Ir directamente a tomar asistencia",
+      "url": "./index.html#take-attendance",
+      "icons": [{ "src": "icons/icon-96x96.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Mis Salones",
+      "short_name": "Salones",
+      "description": "Ver todos los salones",
+      "url": "./index.html#classrooms",
+      "icons": [{ "src": "icons/icon-96x96.png", "sizes": "96x96" }]
+    }
+  ],
+  "prefer_related_applications": false
+}

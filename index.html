@@ -1,0 +1,1392 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>AsistApp</title>
+
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="manifest.json" />
+
+  <!-- Theme & status bar -->
+  <meta name="theme-color" content="#4361EE" />
+  <meta name="mobile-web-app-capable" content="yes" />
+
+  <!-- iOS PWA -->
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="AsistApp" />
+  <link rel="apple-touch-icon" href="icons/icon-152x152.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="icons/icon-192x192.png" />
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" sizes="32x32" href="icons/icon-96x96.png" />
+  <link rel="icon" type="image/png" sizes="16x16" href="icons/icon-72x72.png" />
+
+  <!-- Descripción para SEO/compartir -->
+  <meta name="description" content="App para llevar la asistencia de tus salones de clase" />
+
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<div id="app">
+
+  <!-- Offline banner -->
+  <div id="offline-banner" class="offline-banner hidden">
+    <span>📡 Sin conexión · Datos en caché disponibles</span>
+  </div>
+
+  <!-- ════════════════════════════════════════════
+       F7 · LOGIN
+       ════════════════════════════════════════════ -->
+  <div id="view-login" class="view auth-view">
+    <div class="auth-wrap">
+
+      <!-- Logo -->
+      <div class="auth-logo">
+        <div class="auth-logo-icon">📋</div>
+        <div class="auth-logo-name">AsistApp</div>
+        <div class="auth-logo-sub">Sistema de asistencia escolar</div>
+      </div>
+
+      <!-- Formulario -->
+      <div class="auth-card">
+        <div class="auth-card-title">Iniciar sesión</div>
+
+        <div class="aa-field">
+          <label>Correo electrónico</label>
+          <input type="email" class="aa-input" id="login-email"
+                 placeholder="profe@escuela.com" autocomplete="email" />
+        </div>
+        <div class="aa-field">
+          <label>Contraseña</label>
+          <div class="auth-pass-wrap">
+            <input type="password" class="aa-input" id="login-password"
+                   placeholder="••••••••" autocomplete="current-password" />
+            <button class="auth-eye" onclick="togglePass('login-password', this)">👁</button>
+          </div>
+        </div>
+
+        <div id="login-error" class="auth-error hidden"></div>
+
+        <button class="aa-btn" style="width:100%;margin-top:4px;" onclick="signIn()" id="login-btn">
+          Entrar
+        </button>
+
+        <button class="auth-link" onclick="navigateTo('forgot-password')">
+          ¿Olvidaste tu contraseña?
+        </button>
+      </div>
+
+      <div class="auth-switch">
+        ¿No tienes cuenta?
+        <button class="auth-link-inline" onclick="navigateTo('register')">Crear cuenta</button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════
+       F7 · REGISTRO
+       ════════════════════════════════════════════ -->
+  <div id="view-register" class="view auth-view">
+    <div class="auth-wrap">
+
+      <div class="auth-logo">
+        <div class="auth-logo-icon">📋</div>
+        <div class="auth-logo-name">AsistApp</div>
+        <div class="auth-logo-sub">Crea tu cuenta de docente</div>
+      </div>
+
+      <div class="auth-card">
+        <div class="auth-card-title">Crear cuenta</div>
+
+        <div class="aa-field">
+          <label>Tu nombre</label>
+          <input type="text" class="aa-input" id="reg-name"
+                 placeholder="Ej: Prof. García" autocomplete="name" />
+        </div>
+        <div class="aa-field">
+          <label>Correo electrónico</label>
+          <input type="email" class="aa-input" id="reg-email"
+                 placeholder="profe@escuela.com" autocomplete="email" />
+        </div>
+        <div class="aa-field">
+          <label>Contraseña</label>
+          <div class="auth-pass-wrap">
+            <input type="password" class="aa-input" id="reg-password"
+                   placeholder="Mínimo 6 caracteres" autocomplete="new-password" />
+            <button class="auth-eye" onclick="togglePass('reg-password', this)">👁</button>
+          </div>
+        </div>
+
+        <div id="reg-error" class="auth-error hidden"></div>
+
+        <button class="aa-btn" style="width:100%;margin-top:4px;" onclick="signUp()" id="reg-btn">
+          Crear cuenta
+        </button>
+      </div>
+
+      <div class="auth-switch">
+        ¿Ya tienes cuenta?
+        <button class="auth-link-inline" onclick="navigateTo('login')">Iniciar sesión</button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════
+       F7 · RECUPERAR CONTRASEÑA
+       ════════════════════════════════════════════ -->
+  <div id="view-forgot-password" class="view auth-view">
+    <div class="auth-wrap">
+
+      <div class="auth-logo">
+        <div class="auth-logo-icon">🔑</div>
+        <div class="auth-logo-name">Recuperar acceso</div>
+        <div class="auth-logo-sub">Te enviaremos un correo de restablecimiento</div>
+      </div>
+
+      <div class="auth-card">
+        <div class="auth-card-title">Restablecer contraseña</div>
+        <div class="aa-field">
+          <label>Correo electrónico</label>
+          <input type="email" class="aa-input" id="forgot-email" placeholder="profe@escuela.com" />
+        </div>
+        <div id="forgot-error" class="auth-error hidden"></div>
+        <div id="forgot-success" class="auth-success hidden"></div>
+        <button class="aa-btn" style="width:100%;margin-top:4px;" onclick="sendPasswordReset()">
+          Enviar correo
+        </button>
+      </div>
+
+      <div class="auth-switch">
+        <button class="auth-link-inline" onclick="navigateTo('login')">← Volver al login</button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════
+       P1 · HOME
+       ════════════════════════════════════════════ -->
+  <div id="view-home" class="view">
+    <div class="view-scroll">
+
+      <!-- Saludo -->
+      <div class="greeting-row">
+        <div>
+          <div class="greeting-date" id="today-date">Hoy</div>
+          <div class="greeting-name aa-display">Hola, Profe 👋</div>
+        </div>
+        <div class="home-avatar" onclick="navigateTo('menu')">P</div>
+      </div>
+
+      <!-- Búsqueda global -->
+      <div style="padding:8px 16px;">
+        <div class="aa-search">
+          <span class="search-icon">🔍</span>
+          <input type="text" placeholder="Buscar alumno o salón..." id="home-search" autocomplete="off" />
+        </div>
+      </div>
+
+      <!-- Resultados búsqueda global -->
+      <div id="global-search-results" class="global-search-results hidden"></div>
+
+      <!-- Hero banner -->
+      <div style="padding:4px 16px 4px;">
+        <div class="aa-hero" id="home-hero">
+          <div class="hero-label">HOY · ASISTENCIA</div>
+          <div class="hero-title" id="hero-title">Carga tus salones para comenzar</div>
+          <div class="blob-a"></div>
+          <div class="blob-b"></div>
+          <div class="hero-illus">📋</div>
+        </div>
+      </div>
+
+      <!-- Sección: Mis Salones -->
+      <div class="section-head">
+        <span class="sec-title">Mis Salones</span>
+        <span class="sec-action" onclick="navigateTo('classrooms')">Ver todos →</span>
+      </div>
+      <div class="classrooms-grid" id="home-classrooms"></div>
+      <div id="home-empty" class="hidden" style="padding:0 16px 16px;">
+        <div class="empty-state">
+          <div class="empty-icon">🏫</div>
+          <div class="empty-title">Sin salones aún</div>
+          <div class="empty-sub">Toca el botón + para agregar tu primer salón</div>
+        </div>
+      </div>
+
+      <div style="height:24px;"></div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════
+       P1b · ESTADÍSTICAS (Dashboard)
+       ════════════════════════════════════════════ -->
+  <div id="view-stats" class="view">
+    <div class="app-header">
+      <div class="header-title">Estadísticas</div>
+      <button class="iconbtn" onclick="openSettings()" title="Configurar alertas">⚙️</button>
+    </div>
+    <div class="view-scroll" style="padding-top:8px;">
+
+      <!-- Stats del día -->
+      <div class="dash-stats-row">
+        <div class="dash-stat-pill">
+          <span class="dash-stat-num" id="dash-today-ok">—</span>
+          <span class="dash-stat-lab">Clases hoy</span>
+        </div>
+        <div class="dash-stat-pill">
+          <span class="dash-stat-num" id="dash-pct" style="color:var(--c-green)">—</span>
+          <span class="dash-stat-lab">Asistencia</span>
+        </div>
+        <div class="dash-stat-pill">
+          <span class="dash-stat-num" id="dash-absent" style="color:var(--c-red)">—</span>
+          <span class="dash-stat-lab">Ausencias hoy</span>
+        </div>
+      </div>
+
+      <!-- Gráfico asistencia mensual -->
+      <div class="dash-section">
+        <div class="dash-section-head">
+          <span class="dash-section-title">Asistencia del mes</span>
+          <span class="dash-section-sub" id="dash-chart-month"></span>
+        </div>
+        <div class="dash-chart-wrap">
+          <canvas id="dash-chart"></canvas>
+          <div id="dash-chart-empty" class="dash-empty-msg hidden">Toma asistencia para ver estadísticas</div>
+        </div>
+      </div>
+
+      <!-- Alertas -->
+      <div class="dash-section" id="dash-alerts-section" style="display:none;">
+        <div class="dash-section-head">
+          <span class="dash-section-title">⚠️ Alertas</span>
+          <span class="dash-section-sub" id="dash-alerts-sub"></span>
+        </div>
+        <div id="dash-alerts-list"></div>
+        <button class="dash-alerts-more" onclick="navigateTo('alerts')">Ver todas las alertas →</button>
+      </div>
+
+      <!-- Últimas clases -->
+      <div class="dash-section">
+        <div class="dash-section-head">
+          <span class="dash-section-title">Últimas clases</span>
+        </div>
+        <div id="dash-recent-list"></div>
+        <div id="dash-recent-empty" class="dash-empty-msg hidden">Sin clases registradas aún</div>
+      </div>
+
+      <div style="height:24px;"></div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════
+       P2 · SALONES
+       ════════════════════════════════════════════ -->
+  <div id="view-classrooms" class="view">
+    <div class="app-header">
+      <div class="header-title">Salones</div>
+    </div>
+    <div class="view-scroll">
+
+      <div style="padding:8px 16px 0;">
+        <div class="aa-search">
+          <span class="search-icon">🔍</span>
+          <input type="text" placeholder="Buscar salón..." id="classrooms-search" />
+        </div>
+      </div>
+
+      <div class="classrooms-list" id="classrooms-list">
+        <!-- generado por JS -->
+      </div>
+      <div id="classrooms-empty" class="hidden">
+        <div class="empty-state">
+          <div class="empty-icon">🏫</div>
+          <div class="empty-title">Sin salones aún</div>
+          <div class="empty-sub">Toca el + para crear tu primer salón</div>
+        </div>
+      </div>
+
+      <div style="height:90px;"></div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════
+       P3 · DETALLE DE SALÓN
+       ════════════════════════════════════════════ -->
+  <div id="view-classroom-detail" class="view">
+    <!-- Dark header -->
+    <div class="dark-header" id="detail-dark-header">
+      <div class="topbar">
+        <button class="iconbtn btn-back" onclick="navigateTo('classrooms')">←</button>
+        <div style="display:flex;gap:4px;">
+          <button class="iconbtn" onclick="navigateTo('projection')" title="Proyectar">📽️</button>
+          <button class="iconbtn" onclick="openQRModal()" title="QR del salón">📱</button>
+          <button class="iconbtn" onclick="navigateTo('reports')" title="Reportes">📊</button>
+          <button class="iconbtn" onclick="openEditClassroom()" title="Editar">✏️</button>
+          <button class="iconbtn" onclick="confirmDeleteClassroom()" title="Eliminar">🗑️</button>
+        </div>
+      </div>
+      <div class="eyebrow">Salón</div>
+      <h1 id="detail-classroom-name">—</h1>
+      <div class="sub" id="detail-classroom-sub">—</div>
+    </div>
+
+    <div class="view-scroll" style="margin-top:-12px;">
+
+      <!-- Stats -->
+      <div style="padding:0 16px 16px;">
+        <div class="aa-stats" id="detail-stats">
+          <div class="stat-box">
+            <div class="stat-num" id="detail-stat-students">—</div>
+            <div class="stat-lab">Alumnos</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-num" id="detail-stat-sessions">—</div>
+            <div class="stat-lab">Clases</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-num" id="detail-stat-absent">—</div>
+            <div class="stat-lab">Ausencias</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Segmented: Alumnos / Historial -->
+      <div style="padding:0 16px 12px;">
+        <div class="aa-seg">
+          <div class="active" id="seg-students" onclick="switchSegment('students')">Alumnos</div>
+          <div id="seg-history" onclick="switchSegment('history')">Historial</div>
+        </div>
+      </div>
+
+      <!-- Panel Alumnos -->
+      <div id="panel-students">
+        <!-- Acciones alumnos -->
+        <div style="display:flex;gap:8px;padding:0 16px 12px;">
+          <button class="aa-btn-outline" style="flex:1;height:42px;font-size:13px;" onclick="openAddStudent()">＋ Agregar</button>
+          <button class="aa-btn-outline" style="flex:1;height:42px;font-size:13px;" onclick="openImportStudents()">📂 Importar</button>
+        </div>
+        <div class="student-list-container" id="students-list">
+          <!-- generado por JS -->
+        </div>
+        <div id="students-empty" class="hidden">
+          <div class="empty-state">
+            <div class="empty-icon">👤</div>
+            <div class="empty-title">Sin alumnos</div>
+            <div class="empty-sub">Agrega alumnos o importa desde Excel/CSV</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Panel Historial -->
+      <div id="panel-history" class="hidden">
+        <div class="sessions-list" id="sessions-list">
+          <!-- generado por JS -->
+        </div>
+        <div id="sessions-empty" class="hidden">
+          <div class="empty-state">
+            <div class="empty-icon">📅</div>
+            <div class="empty-title">Sin clases registradas</div>
+            <div class="empty-sub">Toma asistencia para ver el historial aquí</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="height:130px;"></div>
+    </div>
+
+    <!-- Botón Tomar Asistencia -->
+    <div class="aa-savebar" id="btn-take-attendance" onclick="openSwipeAttendance()">
+      <span>⚡</span>
+      <span>Tomar Asistencia</span>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════
+       MODO SWIPE (IZQUIERDA = AUSENTE, DERECHA = PRESENTE)
+       ════════════════════════════════════════════ -->
+  <div id="view-swipe-attendance" class="view sw-view">
+
+    <!-- Header -->
+    <div class="sw-header">
+      <button class="sw-back-btn" onclick="exitSwipeMode()" title="Volver">←</button>
+      <div class="sw-header-center">
+        <div class="sw-header-title">Tomar Asistencia</div>
+        <div class="sw-header-cls" id="sw-header-cls">—</div>
+      </div>
+      <button class="sw-list-btn" onclick="switchToListMode()" title="Modo lista">📋</button>
+    </div>
+
+    <!-- FASE 1: Swipe de tarjetas -->
+    <div id="sw-phase-cards">
+
+      <!-- Barra de progreso -->
+      <div class="sw-progress-wrap">
+        <div class="sw-progress-bar">
+          <div class="sw-progress-fill" id="sw-progress-fill" style="width:0%"></div>
+        </div>
+        <div class="sw-progress-label" id="sw-progress-label">1 / —</div>
+      </div>
+
+      <!-- Escenario de tarjetas -->
+      <div class="sw-stage" id="sw-stage">
+        <!-- Tarjeta de fondo (previsualización del siguiente) -->
+        <div class="sw-card sw-card-bg" id="sw-card-bg">
+          <div class="sw-card-avatar" id="sw-card-bg-avatar">—</div>
+          <div class="sw-card-name"   id="sw-card-bg-name">—</div>
+        </div>
+        <!-- Tarjeta activa -->
+        <div class="sw-card sw-card-active" id="sw-card-active">
+          <div class="sw-overlay-left"  id="sw-overlay-left" ><span class="sw-overlay-label">✕ AUSENTE</span></div>
+          <div class="sw-overlay-right" id="sw-overlay-right"><span class="sw-overlay-label">✓ PRESENTE</span></div>
+          <div class="sw-card-avatar"  id="sw-card-avatar">—</div>
+          <div class="sw-card-name"    id="sw-card-name">—</div>
+          <div class="sw-card-num"     id="sw-card-num">#1</div>
+        </div>
+      </div>
+
+      <!-- Etiquetas de ayuda -->
+      <div class="sw-hint-row">
+        <div class="sw-hint-absent">← Ausente</div>
+        <div class="sw-hint-present">Presente →</div>
+      </div>
+
+      <!-- Botones de acción (fallback táctil) -->
+      <div class="sw-btn-row">
+        <button class="sw-btn sw-btn-undo"    onclick="swipeUndo()"           title="Deshacer">↩</button>
+        <button class="sw-btn sw-btn-absent"  onclick="swipeDecide('absent')" title="Ausente">✕</button>
+        <button class="sw-btn sw-btn-present" onclick="swipeDecide('present')"title="Presente">✓</button>
+      </div>
+
+    </div><!-- /sw-phase-cards -->
+
+    <!-- FASE 2: Resumen antes de guardar -->
+    <div id="sw-phase-summary" class="hidden">
+      <div class="sw-summary-wrap">
+
+        <div class="sw-summary-icon">✅</div>
+        <div class="sw-summary-title">¡Revisión final!</div>
+        <div class="sw-summary-stats" id="sw-summary-stats">
+          <!-- generado por JS -->
+        </div>
+
+        <!-- Campos de metadata -->
+        <div class="sw-summary-fields">
+          <div class="aa-field">
+            <label>Fecha</label>
+            <input type="date" class="aa-input" id="sw-date" />
+          </div>
+          <div class="aa-field">
+            <label>Tema de la clase</label>
+            <input type="text" class="aa-input" id="sw-topic"
+                   placeholder="Ej: Fracciones equivalentes" />
+          </div>
+          <div class="aa-field">
+            <label>Observaciones</label>
+            <textarea class="aa-textarea" id="sw-notes" rows="2" placeholder="Opcional…"></textarea>
+          </div>
+        </div>
+
+        <!-- Lista de ausentes -->
+        <div id="sw-absent-list-wrap" class="sw-absent-wrap">
+          <div class="sw-absent-title">Marcados como ausentes</div>
+          <div id="sw-absent-list"><!-- generado por JS --></div>
+        </div>
+
+        <!-- Acciones -->
+        <div class="sw-summary-actions">
+          <button class="aa-btn-outline" onclick="switchToListMode()">📋 Revisar lista</button>
+          <button class="aa-btn"         onclick="saveSwipeAttendance()">💾 Guardar</button>
+        </div>
+
+      </div>
+    </div><!-- /sw-phase-summary -->
+
+  </div>
+
+  <!-- ════════════════════════════════════════════
+       P4 · TOMAR ASISTENCIA (MODO LISTA — respaldo)
+       ════════════════════════════════════════════ -->
+  <div id="view-take-attendance" class="view">
+    <div class="app-header">
+      <button class="btn-back" onclick="navigateTo('classroom-detail')">←</button>
+      <div style="text-align:center;flex:1;">
+        <div class="header-title">Tomar Asistencia</div>
+        <div style="font-size:11px;color:var(--c-text-2);margin-top:1px;" id="take-att-classroom"></div>
+      </div>
+      <div style="width:36px;"></div>
+    </div>
+    <div class="view-scroll" style="padding-top:4px;">
+
+      <!-- Metadata card -->
+      <div style="background:var(--c-surface);border:1px solid var(--c-border);border-radius:16px;box-shadow:var(--sh-card);margin:4px 16px 14px;padding:16px;display:flex;flex-direction:column;gap:12px;">
+        <div class="aa-field">
+          <label>Fecha</label>
+          <input type="date" class="aa-input" id="attendance-date" />
+        </div>
+        <div class="aa-field">
+          <label>Tema de la clase</label>
+          <input type="text" class="aa-input" id="attendance-topic" placeholder="Ej: Fracciones equivalentes" />
+        </div>
+        <div class="aa-field">
+          <label>Observaciones</label>
+          <textarea class="aa-textarea" id="attendance-notes" rows="2" placeholder="Opcional..."></textarea>
+        </div>
+      </div>
+
+      <!-- Header de lista -->
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:0 16px 6px;">
+        <div class="aa-h3">Marcar Ausentes</div>
+        <span class="aa-badge primary" id="absent-count">0 ausentes</span>
+      </div>
+      <div style="padding:0 16px 10px;">
+        <div class="aa-tap-hint">☝ Toca el nombre del alumno que <strong>no vino</strong></div>
+      </div>
+
+      <!-- Lista de alumnos -->
+      <div class="student-list-container" style="margin:0 16px;" id="attendance-students-list">
+        <!-- generado por JS -->
+      </div>
+
+      <div style="height:130px;"></div>
+    </div>
+
+    <!-- Save bar -->
+    <div class="aa-savebar" id="btn-save-attendance" onclick="saveAttendance()">
+      <span>💾</span>
+      <span>Guardar Asistencia</span>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════
+       P5 · DETALLE DE SESIÓN
+       ════════════════════════════════════════════ -->
+  <div id="view-session-detail" class="view">
+    <!-- Dark header -->
+    <div class="dark-header">
+      <div class="topbar">
+        <button class="iconbtn btn-back" id="session-back-btn">←</button>
+        <button class="iconbtn" onclick="downloadPDF()">⬇️</button>
+      </div>
+      <div class="eyebrow">Detalle de Clase</div>
+      <h1 id="session-detail-date">—</h1>
+      <div class="sub" id="session-detail-classroom">—</div>
+    </div>
+
+    <div class="view-scroll" style="margin-top:-12px;">
+      <!-- Stats -->
+      <div style="padding:0 16px 14px;">
+        <div class="aa-stats">
+          <div class="stat-box">
+            <div class="stat-num" id="session-stat-total">—</div>
+            <div class="stat-lab">Total</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-num" style="color:var(--c-green);" id="session-stat-present">—</div>
+            <div class="stat-lab">Presentes</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-num" style="color:var(--c-red);" id="session-stat-absent">—</div>
+            <div class="stat-lab">Ausentes</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-num" id="session-stat-pct">—</div>
+            <div class="stat-lab">Asistencia</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tema -->
+      <div class="aa-topic-card" id="session-topic-card" style="margin-bottom:16px;">
+        <div class="topic-label">Tema</div>
+        <div class="topic-value" id="session-topic-value">—</div>
+        <div class="topic-note" id="session-notes-value"></div>
+      </div>
+
+      <!-- Ausentes -->
+      <div class="detail-list-section" id="detail-absent-section" style="margin-bottom:16px;">
+        <div class="detail-list-label">Ausentes</div>
+        <div class="student-list-container" style="margin:0;" id="detail-absent-list"></div>
+      </div>
+
+      <!-- Presentes -->
+      <div class="detail-list-section" id="detail-present-section" style="margin-bottom:24px;">
+        <div class="detail-list-label">Presentes</div>
+        <div class="student-list-container" style="margin:0;" id="detail-present-list"></div>
+      </div>
+
+      <div style="height:24px;"></div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════
+       P6 · PERFIL DE ESTUDIANTE
+       ════════════════════════════════════════════ -->
+  <div id="view-student-profile" class="view">
+    <!-- Dark header con avatar -->
+    <div class="dark-header profile-dark-header">
+      <div class="topbar">
+        <button class="iconbtn btn-back" id="profile-back-btn">←</button>
+        <div style="font-size:11px;color:rgba(255,255,255,0.55);letter-spacing:.05em;">PERFIL</div>
+        <div style="width:36px;"></div>
+      </div>
+      <div class="profile-header-body">
+        <div class="profile-avatar-lg" id="profile-avatar-lg">AB</div>
+        <h1 class="profile-name" id="profile-student-name">—</h1>
+        <div class="sub" id="profile-classroom-label">—</div>
+      </div>
+    </div>
+
+    <div class="view-scroll" style="margin-top:-12px;">
+
+      <!-- Filtro de periodo -->
+      <div style="padding:0 16px 8px;">
+        <div class="aa-seg aa-seg-4">
+          <div id="pf-seg-month"     onclick="switchProfilePeriod('month')">Mes</div>
+          <div id="pf-seg-trimester" onclick="switchProfilePeriod('trimester')">Trimestre</div>
+          <div id="pf-seg-year"      onclick="switchProfilePeriod('year')" class="active">Año</div>
+          <div id="pf-seg-custom"    onclick="switchProfilePeriod('custom')">Rango</div>
+        </div>
+      </div>
+
+      <!-- Rango de fechas personalizado (oculto por defecto) -->
+      <div id="pf-custom-range" class="pf-range-picker hidden">
+        <div class="pf-range-row">
+          <div class="pf-range-field">
+            <label>Desde</label>
+            <input type="date" class="aa-input pf-range-input" id="pf-range-from" />
+          </div>
+          <div class="pf-range-sep">→</div>
+          <div class="pf-range-field">
+            <label>Hasta</label>
+            <input type="date" class="aa-input pf-range-input" id="pf-range-to" />
+          </div>
+        </div>
+        <button class="aa-btn pf-range-apply" onclick="applyCustomRange()">
+          Aplicar rango
+        </button>
+      </div>
+
+      <!-- Stats 4 cajas -->
+      <div style="padding:0 16px 16px;">
+        <div class="aa-stats">
+          <div class="stat-box">
+            <div class="stat-num" style="color:var(--c-green);" id="profile-pct-period">—</div>
+            <div class="stat-lab" id="profile-pct-lab">Asistencia</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-num" style="color:var(--c-red);" id="profile-absent-period">—</div>
+            <div class="stat-lab" id="profile-absent-lab">Ausencias</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-num" id="profile-total-absent">—</div>
+            <div class="stat-lab">Histórico</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-num" id="profile-streak">—</div>
+            <div class="stat-lab">Racha 🔥</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Calendario 30 días -->
+      <div class="dash-section">
+        <div class="dash-section-head">
+          <span class="dash-section-title">Últimos 30 días</span>
+        </div>
+        <div class="profile-cal-wrap">
+          <div id="profile-calendar" class="profile-calendar profile-calendar-30"></div>
+          <div class="profile-cal-legend">
+            <span class="cal-leg cal-present-leg">Presente</span>
+            <span class="cal-leg cal-absent-leg">Ausente</span>
+            <span class="cal-leg cal-none-leg">Sin clase</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Gráfico de tendencia (6 meses) -->
+      <div class="dash-section">
+        <div class="dash-section-head">
+          <span class="dash-section-title">Tendencia (6 meses)</span>
+        </div>
+        <div class="dash-chart-wrap">
+          <canvas id="profile-trend-chart"></canvas>
+          <div id="profile-trend-empty" class="dash-empty-msg hidden">
+            Sin datos suficientes aún
+          </div>
+        </div>
+      </div>
+
+      <!-- Timeline de ausencias -->
+      <div class="dash-section">
+        <div class="dash-section-head">
+          <span class="dash-section-title">Ausencias registradas</span>
+          <span class="dash-section-sub" id="profile-absence-count"></span>
+        </div>
+        <div id="profile-absence-timeline"></div>
+        <div id="profile-no-absences" class="dash-empty-msg hidden">
+          ¡Sin ausencias! 🎉
+        </div>
+      </div>
+
+      <div style="height:24px;"></div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════
+       MODAL: Justificación de ausencia
+       ════════════════════════════════════════════ -->
+  <div id="modal-justification" class="modal-overlay">
+    <div class="aa-sheet">
+      <div class="sheet-handle"></div>
+      <div class="sheet-head">
+        <span class="sheet-title">Justificación</span>
+        <button class="sheet-close" onclick="closeModal('modal-justification')">✕</button>
+      </div>
+      <div class="sheet-body">
+        <div id="justif-session-info" style="font-size:12px;color:var(--c-text-2);margin-bottom:14px;"></div>
+        <div class="aa-field">
+          <label>Motivo de la ausencia</label>
+          <textarea class="aa-textarea" id="justif-text" rows="3"
+                    placeholder="Ej: Cita médica, permiso familiar..."></textarea>
+        </div>
+      </div>
+      <div class="sheet-foot">
+        <button class="aa-btn-outline" onclick="closeModal('modal-justification')">Cancelar</button>
+        <button class="aa-btn" onclick="saveJustification()">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════
+       BOTTOM NAV
+       ════════════════════════════════════════════ -->
+  <nav id="bottom-nav">
+    <div class="nav-item active" data-view="home" onclick="navigateTo('home')">
+      <div class="nav-icon">🏠</div>
+      <div class="nav-label">Inicio</div>
+      <div class="nav-dot"></div>
+    </div>
+    <div class="nav-item" data-view="classrooms" onclick="navigateTo('classrooms')">
+      <div class="nav-icon">🏫</div>
+      <div class="nav-label">Salones</div>
+      <div class="nav-dot"></div>
+    </div>
+    <div class="nav-item" data-view="stats" onclick="navigateTo('stats')">
+      <div class="nav-icon" style="position:relative;">📊<span id="alert-nav-badge" class="alert-nav-badge hidden"></span></div>
+      <div class="nav-label">Estadísticas</div>
+      <div class="nav-dot"></div>
+    </div>
+    <div class="nav-item" data-view="menu" onclick="navigateTo('menu')">
+      <div class="nav-icon">☰</div>
+      <div class="nav-label">Menú</div>
+      <div class="nav-dot"></div>
+    </div>
+  </nav>
+
+  <!-- ════════════════════════════════════════════
+       P9 · REPORTES
+       ════════════════════════════════════════════ -->
+  <div id="view-reports" class="view">
+    <div class="dark-header" style="background:linear-gradient(135deg,#1d2b6b,#4361EE);">
+      <div class="topbar">
+        <button class="iconbtn btn-back" onclick="navigateTo('classroom-detail')">←</button>
+        <div style="font-size:11px;color:rgba(255,255,255,0.7);">Reportes</div>
+        <div style="width:36px;"></div>
+      </div>
+      <div class="eyebrow">Exportar datos</div>
+      <h1 id="rpt-classroom-name">—</h1>
+      <div class="sub" id="rpt-classroom-sub">—</div>
+    </div>
+
+    <div class="view-scroll" style="margin-top:-12px;padding-bottom:100px;">
+
+      <!-- Reportes rápidos -->
+      <div class="rpt-section-title">Reportes rápidos</div>
+      <div style="padding:0 16px;display:flex;flex-direction:column;gap:10px;">
+
+        <div class="rpt-card" onclick="generateEvacuationReport()">
+          <div class="rpt-card-icon" style="background:#FEE2E2;color:#DC2626;">🚨</div>
+          <div class="rpt-card-body">
+            <div class="rpt-card-name">Lista de Evacuación</div>
+            <div class="rpt-card-desc">Presentes HOY · PDF con letra grande</div>
+          </div>
+          <div class="rpt-card-arrow">↓ PDF</div>
+        </div>
+
+        <div class="rpt-card" onclick="generateLowAttendanceReport()">
+          <div class="rpt-card-icon" style="background:#FFFBEB;color:#D97706;">⚠️</div>
+          <div class="rpt-card-body">
+            <div class="rpt-card-name">Reporte de Alertas</div>
+            <div class="rpt-card-desc">Alumnos con bajo rendimiento · PDF</div>
+          </div>
+          <div class="rpt-card-arrow">↓ PDF</div>
+        </div>
+
+        <div class="rpt-card" onclick="generateFullExport()">
+          <div class="rpt-card-icon" style="background:#ECFDF5;color:#059669;">💾</div>
+          <div class="rpt-card-body">
+            <div class="rpt-card-name">Exportación Completa</div>
+            <div class="rpt-card-desc">Todos los datos · Excel (.xlsx)</div>
+          </div>
+          <div class="rpt-card-arrow">↓ Excel</div>
+        </div>
+
+        <div class="rpt-card" onclick="generateBlankAttendancePDF()">
+          <div class="rpt-card-icon" style="background:#F5F3FF;color:#7C3AED;">📝</div>
+          <div class="rpt-card-body">
+            <div class="rpt-card-name">Lista en Blanco</div>
+            <div class="rpt-card-desc">Pase de lista en papel · con casillas □</div>
+          </div>
+          <div class="rpt-card-arrow">↓ PDF</div>
+        </div>
+
+        <div class="rpt-card" onclick="generateBlankAttendancePDF()">
+          <div class="rpt-card-icon" style="background:#F0F4FF;color:#4361EE;">📝</div>
+          <div class="rpt-card-body">
+            <div class="rpt-card-name">Lista en Blanco</div>
+            <div class="rpt-card-desc">Pase de lista para imprimir en papel · PDF</div>
+          </div>
+          <div class="rpt-card-arrow">↓ PDF</div>
+        </div>
+      </div>
+
+      <!-- Reportes semanales -->
+      <div class="rpt-section-title" style="margin-top:20px;">Resumen Semanal</div>
+      <div style="padding:0 16px;">
+        <div class="rpt-picker-card">
+          <div class="aa-field" style="margin:0;">
+            <label>Seleccionar semana (inicio lunes)</label>
+            <input type="date" class="aa-input" id="rpt-week-input" />
+          </div>
+          <div style="display:flex;gap:8px;margin-top:12px;">
+            <button class="rpt-action-btn rpt-pdf" onclick="generateWeeklyPDF()">
+              📄 PDF Semanal
+            </button>
+            <button class="rpt-action-btn rpt-excel" onclick="generateWeeklyExcel()">
+              📊 Excel Semanal
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Reportes mensuales -->
+      <div class="rpt-section-title" style="margin-top:20px;">Resumen Mensual</div>
+      <div style="padding:0 16px;">
+        <div class="rpt-picker-card">
+          <div class="aa-field" style="margin:0;">
+            <label>Seleccionar mes</label>
+            <input type="month" class="aa-input" id="rpt-month-sel" />
+          </div>
+          <div style="display:flex;gap:8px;margin-top:12px;">
+            <button class="rpt-action-btn rpt-pdf" onclick="generateMonthlyPDF()">
+              📄 PDF Mensual
+            </button>
+            <button class="rpt-action-btn rpt-excel" onclick="generateMonthlyExcel()">
+              📊 Excel Mensual
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Reportes por alumno -->
+      <div class="rpt-section-title" style="margin-top:20px;">
+        Reporte por Alumno
+        <span style="font-size:11px;color:var(--c-text-2);font-weight:400;margin-left:6px;">Para padres y representantes</span>
+      </div>
+      <div style="padding:0 16px;">
+        <div class="rpt-picker-card" style="padding:12px 14px;">
+          <div id="rpt-students-list">
+            <div style="padding:8px 0;color:var(--c-text-2);font-size:13px;">Cargando alumnos…</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════
+       F6 · ALERTAS INTELIGENTES
+       ════════════════════════════════════════════ -->
+  <div id="view-alerts" class="view">
+    <div class="app-header">
+      <button class="btn-back iconbtn" onclick="navigateTo('stats')">←</button>
+      <div class="header-title">Alertas Activas</div>
+      <button class="iconbtn" onclick="openSettings()" title="Configurar alertas">⚙️</button>
+    </div>
+
+    <div class="view-scroll" style="padding-top:12px;padding-bottom:80px;">
+
+      <!-- Filtros por tipo -->
+      <div style="padding:0 16px 12px;display:flex;gap:8px;overflow-x:auto;">
+        <button class="al-filter active" id="al-f-all"      onclick="filterAlerts('all')">Todas</button>
+        <button class="al-filter"        id="al-f-threshold" onclick="filterAlerts('threshold')">⚠️ Umbral</button>
+        <button class="al-filter"        id="al-f-pattern"   onclick="filterAlerts('pattern')">🔁 Patrón</button>
+        <button class="al-filter"        id="al-f-classroom" onclick="filterAlerts('classroom')">🏫 Salón</button>
+        <button class="al-filter"        id="al-f-recovery"  onclick="filterAlerts('recovery')">🌟 Recuperación</button>
+      </div>
+
+      <!-- Conteo -->
+      <div style="padding:0 16px 8px;font-size:12px;color:var(--c-text-2);" id="al-count-label">Cargando alertas…</div>
+
+      <!-- Lista de alertas -->
+      <div id="al-list" style="padding:0 16px;display:flex;flex-direction:column;gap:10px;">
+        <!-- generado por JS -->
+      </div>
+
+      <!-- Estado vacío -->
+      <div id="al-empty" class="hidden">
+        <div class="empty-state">
+          <div class="empty-icon">✅</div>
+          <div class="empty-title">Sin alertas activas</div>
+          <div class="empty-sub">Todos los salones están al día</div>
+        </div>
+      </div>
+
+      <!-- Botón limpiar alertas reconocidas -->
+      <div style="padding:20px 16px 0;" id="al-clear-wrap">
+        <button class="aa-btn-outline" style="width:100%;font-size:13px;" onclick="clearDismissedAlerts()">
+          🗑️ Limpiar alertas descartadas
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════
+       MENÚ
+       ════════════════════════════════════════════ -->
+  <div id="view-menu" class="view">
+    <div class="app-header">
+      <div class="header-title">Menú</div>
+    </div>
+    <div class="view-scroll" style="padding-top:16px;">
+
+      <div style="padding:0 16px;">
+
+        <!-- Perfil dinámico -->
+        <div class="menu-card" onclick="navigateTo('profile')" style="cursor:pointer;">
+          <div class="menu-avatar" id="menu-avatar-initials">P</div>
+          <div class="menu-info">
+            <div class="menu-name" id="menu-user-name">Docente</div>
+            <div class="menu-sub" id="menu-user-email">—</div>
+          </div>
+          <span style="font-size:14px;color:var(--c-text-2);">✏️</span>
+        </div>
+
+        <!-- Acciones -->
+        <div class="menu-section-title">Configuración</div>
+
+        <div class="menu-row" onclick="openSettings()">
+          <span class="menu-row-icon">⚙️</span>
+          <span class="menu-row-label">Umbral de alertas de ausencia</span>
+          <span class="menu-row-val" id="menu-threshold-val">3 ausencias</span>
+        </div>
+
+        <div class="menu-section-title" style="margin-top:20px;">Acerca de</div>
+
+        <div class="menu-row" style="cursor:default;">
+          <span class="menu-row-icon">📋</span>
+          <span class="menu-row-label">AsistApp</span>
+          <span class="menu-row-val">v1.0</span>
+        </div>
+        <div class="menu-row" style="cursor:default;">
+          <span class="menu-row-icon">🔥</span>
+          <span class="menu-row-label">Base de datos</span>
+          <span class="menu-row-val">Firebase Firestore</span>
+        </div>
+        <div class="menu-row" style="cursor:default;">
+          <span class="menu-row-icon">📶</span>
+          <span class="menu-row-label">Modo offline</span>
+          <span class="menu-row-val">Activado ✓</span>
+        </div>
+
+        <div class="menu-section-title" style="margin-top:20px;">Mantenimiento</div>
+        <div class="menu-row" onclick="forceAppUpdate()" style="color:var(--c-primary);">
+          <span class="menu-row-icon">🔄</span>
+          <span class="menu-row-label">Actualizar app</span>
+          <span class="menu-row-val" id="menu-sw-version">v7</span>
+        </div>
+
+        <div class="menu-section-title" style="margin-top:20px;">Cuenta</div>
+        <div class="menu-row" onclick="confirmSignOut()" style="color:#DC2626;">
+          <span class="menu-row-icon">🚪</span>
+          <span class="menu-row-label">Cerrar sesión</span>
+        </div>
+
+      </div>
+      <div style="height:40px;"></div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════
+       F7 · PERFIL DEL DOCENTE
+       ════════════════════════════════════════════ -->
+  <div id="view-profile" class="view">
+    <div class="app-header">
+      <button class="iconbtn btn-back" onclick="navigateTo('menu')">←</button>
+      <div class="header-title">Mi Perfil</div>
+      <div style="width:36px;"></div>
+    </div>
+    <div class="view-scroll" style="padding-top:20px;padding-bottom:80px;">
+
+      <!-- Avatar grande -->
+      <div style="display:flex;flex-direction:column;align-items:center;gap:8px;padding-bottom:24px;">
+        <div class="profile-avatar-lg" id="profile-avatar-lg">P</div>
+        <div style="font-size:18px;font-weight:700;color:var(--c-text-1);" id="profile-name-display">—</div>
+        <div style="font-size:13px;color:var(--c-text-2);" id="profile-email-display">—</div>
+      </div>
+
+      <!-- Formulario de edición -->
+      <div style="padding:0 16px;display:flex;flex-direction:column;gap:16px;">
+
+        <div style="background:var(--c-surface);border:1px solid var(--c-border);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:12px;">
+          <div class="aa-field">
+            <label>Nombre</label>
+            <input type="text" class="aa-input" id="profile-name-input" placeholder="Tu nombre" />
+          </div>
+          <div class="aa-field">
+            <label>Correo electrónico</label>
+            <input type="email" class="aa-input" id="profile-email-input" placeholder="tu@correo.com" autocomplete="email" />
+          </div>
+          <button class="aa-btn" onclick="saveProfile()">Guardar cambios</button>
+        </div>
+
+        <div style="background:var(--c-surface);border:1px solid var(--c-border);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:12px;">
+          <div style="font-size:13px;font-weight:700;color:var(--c-text-1);margin-bottom:4px;">Cambiar contraseña</div>
+          <div class="aa-field">
+            <label>Nueva contraseña</label>
+            <div class="auth-pass-wrap">
+              <input type="password" class="aa-input" id="profile-new-pass" placeholder="Mínimo 6 caracteres" />
+              <button class="auth-eye" onclick="togglePass('profile-new-pass', this)">👁</button>
+            </div>
+          </div>
+          <button class="aa-btn-outline" onclick="changePassword()">Cambiar contraseña</button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════
+       VISTA DE PROYECCIÓN (F5)
+       ════════════════════════════════════════════ -->
+  <div id="view-projection" class="view proj-view">
+
+    <!-- Barra superior -->
+    <div class="proj-topbar">
+      <button class="proj-exit-btn" onclick="exitProjection()">✕ Salir</button>
+      <div class="proj-topbar-center">
+        <div class="proj-classroom-name" id="proj-classroom-name">—</div>
+        <div class="proj-classroom-sub" id="proj-classroom-sub"></div>
+      </div>
+      <div class="proj-date" id="proj-date">—</div>
+    </div>
+
+    <!-- Stats grandes -->
+    <div class="proj-stats-row">
+      <div class="proj-stat-card proj-present-card">
+        <div class="proj-stat-num" id="proj-present-count">—</div>
+        <div class="proj-stat-lab">PRESENTES</div>
+      </div>
+      <div class="proj-stat-card proj-absent-card">
+        <div class="proj-stat-num" id="proj-absent-count">—</div>
+        <div class="proj-stat-lab">AUSENTES</div>
+      </div>
+      <div class="proj-stat-card proj-total-card">
+        <div class="proj-stat-num" id="proj-total-count">—</div>
+        <div class="proj-stat-lab">TOTAL</div>
+      </div>
+      <div class="proj-stat-card proj-pct-card">
+        <div class="proj-stat-num" id="proj-pct">—</div>
+        <div class="proj-stat-lab">ASISTENCIA</div>
+      </div>
+    </div>
+
+    <!-- Tema de la clase -->
+    <div class="proj-topic" id="proj-topic" style="display:none;"></div>
+
+    <!-- Grid de alumnos -->
+    <div class="proj-grid" id="proj-student-grid"></div>
+
+    <!-- Estado: sin sesión hoy -->
+    <div id="proj-no-session" class="proj-no-session hidden">
+      <div class="proj-no-icon">📋</div>
+      <div class="proj-no-title">No hay clase activa hoy</div>
+      <div class="proj-no-sub">Inicia el pase de lista en tu dispositivo<br>y la pantalla se actualizará automáticamente</div>
+    </div>
+
+    <!-- Indicador de actualización en vivo -->
+    <div class="proj-live-badge">
+      <span class="proj-live-dot"></span> EN VIVO
+    </div>
+
+  </div>
+
+  <!-- ════════════════════════════════════════════
+       MODAL: QR del salón
+       ════════════════════════════════════════════ -->
+  <div id="modal-qr" class="modal-overlay">
+    <div class="aa-sheet">
+      <div class="sheet-handle"></div>
+      <div class="sheet-head">
+        <span class="sheet-title">QR del Salón</span>
+        <button class="sheet-close" onclick="closeModal('modal-qr')">✕</button>
+      </div>
+      <div class="sheet-body" style="display:flex;flex-direction:column;align-items:center;gap:16px;">
+        <div id="qr-modal-canvas" style="padding:16px;background:#fff;border-radius:16px;box-shadow:0 2px 12px rgba(0,0,0,.1);"></div>
+        <div style="text-align:center;">
+          <div style="font-size:16px;font-weight:700;color:var(--c-text);" id="qr-modal-name">—</div>
+          <div style="font-size:12px;color:var(--c-text-2);margin-top:4px;" id="qr-modal-sub"></div>
+        </div>
+        <p style="font-size:12px;color:var(--c-text-2);text-align:center;margin:0;">
+          Escanea para identificar este salón rápidamente desde otro dispositivo.
+        </p>
+      </div>
+      <div class="sheet-foot">
+        <button class="aa-btn" style="width:100%;" onclick="closeModal('modal-qr')">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- FAB -->
+  <button id="fab" onclick="openAddClassroom()" aria-label="Nuevo salón">＋</button>
+
+  <!-- Toast -->
+  <div id="toast"></div>
+
+  <!-- ════════════════════════════════════════════
+       MODAL: Configuración de alertas
+       ════════════════════════════════════════════ -->
+  <div id="modal-settings" class="modal-overlay">
+    <div class="aa-sheet">
+      <div class="sheet-handle"></div>
+      <div class="sheet-head">
+        <span class="sheet-title">Configurar Alertas</span>
+        <button class="sheet-close" onclick="closeModal('modal-settings')">✕</button>
+      </div>
+      <div class="sheet-body">
+
+        <div class="settings-section-title">Umbrales de ausencia</div>
+        <div class="aa-field">
+          <label>Ausencias (últimas 10 clases) para alertar</label>
+          <input type="number" class="aa-input" id="settings-threshold"
+                 min="1" max="20" value="3" />
+        </div>
+        <div class="aa-field">
+          <label>Ausencias en el mes para alertar</label>
+          <input type="number" class="aa-input" id="settings-monthly-threshold"
+                 min="1" max="20" value="4" />
+        </div>
+
+        <div class="settings-section-title" style="margin-top:20px;">Tipos de alerta activos</div>
+
+        <div class="settings-toggle-row">
+          <div class="settings-toggle-info">
+            <span class="settings-toggle-icon">🔁</span>
+            <div>
+              <div class="settings-toggle-name">Patrón de ausencias</div>
+              <div class="settings-toggle-desc">Alumno ausente 3 sesiones consecutivas</div>
+            </div>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="settings-enable-pattern" checked />
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+
+        <div class="settings-toggle-row">
+          <div class="settings-toggle-info">
+            <span class="settings-toggle-icon">🏫</span>
+            <div>
+              <div class="settings-toggle-name">Salón inactivo</div>
+              <div class="settings-toggle-desc">Sin sesión registrada en los últimos 7 días</div>
+            </div>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="settings-enable-classroom" checked />
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+
+        <div class="settings-toggle-row">
+          <div class="settings-toggle-info">
+            <span class="settings-toggle-icon">🌟</span>
+            <div>
+              <div class="settings-toggle-name">Racha de recuperación</div>
+              <div class="settings-toggle-desc">Alumno con 5+ clases asistidas seguidas</div>
+            </div>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="settings-enable-recovery" checked />
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+
+      </div>
+      <div class="sheet-foot">
+        <button class="aa-btn-outline" onclick="closeModal('modal-settings')">Cancelar</button>
+        <button class="aa-btn" onclick="saveSettings()">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════
+       MODAL: Nuevo / Editar Salón
+       ════════════════════════════════════════════ -->
+  <div id="modal-classroom" class="modal-overlay">
+    <div class="aa-sheet">
+      <div class="sheet-handle"></div>
+      <div class="sheet-head">
+        <span class="sheet-title" id="modal-classroom-title">Nuevo Salón</span>
+        <button class="sheet-close" onclick="closeModal('modal-classroom')">✕</button>
+      </div>
+      <div class="sheet-body">
+        <div class="aa-field">
+          <label>Nombre del salón</label>
+          <input type="text" class="aa-input" id="classroom-name" placeholder="Ej: 5to A" />
+        </div>
+        <div class="aa-field">
+          <label>Materia</label>
+          <input type="text" class="aa-input" id="classroom-subject" placeholder="Ej: Matemáticas" />
+        </div>
+        <div class="aa-field">
+          <label>Grado / Nivel</label>
+          <input type="text" class="aa-input" id="classroom-grade" placeholder="Ej: Primaria" />
+        </div>
+      </div>
+      <div class="sheet-foot">
+        <button class="aa-btn-outline" onclick="closeModal('modal-classroom')">Cancelar</button>
+        <button class="aa-btn" onclick="saveClassroom()">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════
+       MODAL: Agregar Alumno
+       ════════════════════════════════════════════ -->
+  <div id="modal-student" class="modal-overlay">
+    <div class="aa-sheet">
+      <div class="sheet-handle"></div>
+      <div class="sheet-head">
+        <span class="sheet-title">Agregar Alumno</span>
+        <button class="sheet-close" onclick="closeModal('modal-student')">✕</button>
+      </div>
+      <div class="sheet-body">
+        <div class="aa-field">
+          <label>Nombre completo</label>
+          <input type="text" class="aa-input" id="student-name" placeholder="Ej: Ana Mendoza" />
+        </div>
+      </div>
+      <div class="sheet-foot">
+        <button class="aa-btn-outline" onclick="closeModal('modal-student')">Cancelar</button>
+        <button class="aa-btn" onclick="saveStudent()">Agregar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════
+       MODAL: Importar Excel/CSV
+       ════════════════════════════════════════════ -->
+  <div id="modal-import" class="modal-overlay">
+    <div class="aa-sheet">
+      <div class="sheet-handle"></div>
+      <div class="sheet-head">
+        <span class="sheet-title">Importar Lista</span>
+        <button class="sheet-close" onclick="closeModal('modal-import')">✕</button>
+      </div>
+      <div class="sheet-body">
+        <div class="aa-drop" id="drop-zone" onclick="document.getElementById('file-input').click()">
+          <div class="drop-icon">📂</div>
+          <div class="drop-text">Toca para seleccionar archivo</div>
+          <div class="drop-hint">Excel (.xlsx, .xls) o CSV</div>
+        </div>
+        <input type="file" id="file-input" accept=".xlsx,.xls,.csv" class="hidden" onchange="handleFileImport(event)" />
+
+        <div id="import-preview" class="hidden">
+          <div style="font-size:13px;font-weight:600;color:var(--c-text);" id="import-count-text">0 alumnos encontrados</div>
+          <div class="import-names-preview" id="import-names-list"></div>
+        </div>
+      </div>
+      <div class="sheet-foot">
+        <button class="aa-btn-outline" onclick="closeModal('modal-import')">Cancelar</button>
+        <button class="aa-btn" id="btn-confirm-import" onclick="confirmImport()" disabled>Importar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════
+       CONFIRM DIALOG
+       ════════════════════════════════════════════ -->
+  <div id="modal-confirm" class="confirm-overlay">
+    <div class="confirm-card">
+      <div class="confirm-title" id="confirm-title">¿Estás seguro?</div>
+      <div class="confirm-message" id="confirm-message"></div>
+      <div class="confirm-actions">
+        <button class="aa-btn-outline" onclick="closeModal('modal-confirm')">Cancelar</button>
+        <button class="aa-btn-danger" id="confirm-ok-btn">Eliminar</button>
+      </div>
+    </div>
+  </div>
+
+</div><!-- #app -->
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+<!-- PDF -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.2/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+
+<!-- QR -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+<!-- Excel/CSV -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+<!-- App -->
+<script src="firebase-config.js"></script>
+<script src="app.js"></script>
+<script src="reports.js"></script>
+
+<!-- PWA: Registro del Service Worker -->
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./service-worker.js')
+      .then(reg => {
+        console.log('[PWA] Service Worker registrado:', reg.scope);
+
+        // Detectar nueva versión disponible
+        reg.addEventListener('updatefound', () => {
+          const newWorker = reg.installing;
+          newWorker.addEventListener('statechange', () => {
+            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+              // Hay una actualización — notificar al usuario
+              if (confirm('¡Nueva versión disponible! ¿Actualizar ahora?')) {
+                newWorker.postMessage({ type: 'SKIP_WAITING' });
+                window.location.reload();
+              }
+            }
+          });
+        });
+      })
+      .catch(err => console.warn('[PWA] Error registrando SW:', err));
+  });
+
+  // Recargar cuando el SW nuevo tome control
+  let refreshing = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!refreshing) { refreshing = true; window.location.reload(); }
+  });
+}
+</script>
+
+</body>
+</html>

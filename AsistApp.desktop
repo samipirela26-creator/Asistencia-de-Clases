@@ -1,0 +1,12 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=AsistApp
+GenericName=Control de Asistencia
+Comment=App para llevar asistencia de salones de clase
+Exec=/home/sanuel/Documentos/Asistencia/Asistencia/launch.sh
+Icon=/home/sanuel/Documentos/Asistencia/Asistencia/asistapp-icon.png
+Terminal=false
+Categories=Education;
+Keywords=asistencia;clase;salón;estudiantes;
+StartupNotify=false

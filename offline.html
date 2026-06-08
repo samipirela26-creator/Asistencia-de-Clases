@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sin conexión · AsistApp</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap');
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      height: 100%;
+      font-family: 'Poppins', system-ui, sans-serif;
+      background: #F4F5F7;
+      color: #1A1A2E;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .card {
+      background: #fff;
+      border-radius: 24px;
+      padding: 40px 32px;
+      max-width: 340px;
+      width: 90%;
+      text-align: center;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.10);
+    }
+    .icon { font-size: 64px; margin-bottom: 16px; }
+    h1 { font-size: 22px; font-weight: 700; margin-bottom: 8px; }
+    p  { font-size: 14px; color: #8A8A9A; line-height: 1.6; margin-bottom: 28px; }
+    .pill {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: #EEF2FF; color: #4361EE;
+      padding: 6px 14px; border-radius: 20px;
+      font-size: 12px; font-weight: 600; margin-bottom: 28px;
+    }
+    button {
+      width: 100%; height: 52px;
+      background: #4361EE; color: #fff;
+      border: none; border-radius: 14px;
+      font-family: inherit; font-size: 15px; font-weight: 700;
+      cursor: pointer;
+    }
+    button:active { background: #3451D1; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="icon">📡</div>
+    <h1>Sin conexión</h1>
+    <p>No hay internet en este momento. Los datos que ya cargaste siguen disponibles gracias al modo offline.</p>
+    <div class="pill">📋 Datos en caché disponibles</div>
+    <button onclick="window.location.reload()">Reintentar conexión</button>
+  </div>
+</body>
+</html>
