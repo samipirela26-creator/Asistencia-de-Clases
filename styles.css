@@ -1209,7 +1209,7 @@ input, textarea, button, select { font-family: inherit; }
 ══════════════════════════════════════════════ */
 .proj-view {
   background: #0D0F1A !important;
-  display: flex;
+  display: none;
   flex-direction: column;
   height: 100dvh;
   overflow: hidden;
