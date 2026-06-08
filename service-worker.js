@@ -3,7 +3,7 @@
    Estrategia: Cache First para assets, Network First para datos
    ============================================================ */
 
-const CACHE_NAME    = 'asistapp-v8';
+const CACHE_NAME    = 'asistapp-v9';
 const OFFLINE_URL   = './offline.html';
 
 // Archivos que se precargan al instalar el SW
@@ -19,7 +19,7 @@ const PRECACHE_URLS = [
   './icons/icon-192x192.png',
   './icons/icon-512x512.png',
   // Librerías CDN — disponibles offline
-  'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.2/jspdf.umd.min.js',
+  'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
   'https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js',
   'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js',
   'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js',
