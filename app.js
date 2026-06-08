@@ -535,6 +535,8 @@ function classroomListItemHTML(c) {
       </div>
       <div class="item-count" id="list-count-${c.id}"
            style="background:${color.bg};color:${color.text}">—</div>
+      <button class="item-delete" title="Eliminar salón"
+              onclick="deleteClassroomFromList('${c.id}', event)">🗑️</button>
       <span class="chevron">›</span>
     </div>`;
 }
@@ -1064,9 +1066,19 @@ async function saveClassroom() {
 // ════════════════════════════════════
 // ELIMINAR SALÓN
 // ════════════════════════════════════
-function confirmDeleteClassroom() {
-  const c = state.currentClassroom;
+// Eliminar desde la lista de salones (botón 🗑️ en cada tarjeta).
+// `event` permite frenar la propagación para que no se abra el salón al borrar.
+function deleteClassroomFromList(classroomId, event) {
+  if (event) event.stopPropagation();
+  const c = state.classrooms.find(x => x.id === classroomId);
+  if (c) confirmDeleteClassroom(c);
+}
+
+// Acepta un salón opcional; si no se pasa, usa el salón abierto (vista detalle).
+function confirmDeleteClassroom(classroom) {
+  const c = classroom || state.currentClassroom;
   if (!c) return;
+  const fromDetail = state.currentClassroom?.id === c.id;
   showConfirm(
     'Eliminar Salón',
     `¿Eliminar "${c.name}" y todos sus datos?\nEsta acción no se puede deshacer.`,
@@ -1091,11 +1103,12 @@ function confirmDeleteClassroom() {
 
         // Limpiar caché local
         if (state._lastSessions) delete state._lastSessions[c.id];
-        state.currentClassroom = null;
+        if (state.currentClassroom?.id === c.id) state.currentClassroom = null;
 
         closeModal('modal-confirm');
         showToast('Salón eliminado');
-        navigateTo('classrooms');
+        // Si lo borramos desde el detalle, volver a la lista; si no, quedarse.
+        if (fromDetail) navigateTo('classrooms');
       } catch (e) {
         console.error(e);
         showToast('Error al eliminar');
