@@ -442,6 +442,25 @@ input, textarea, button, select { font-family: inherit; }
 .aa-input:focus, .aa-textarea:focus { border-color: var(--c-primary); background: #fff; }
 .aa-textarea { height: auto; padding: 12px 14px; resize: none; line-height: 1.4; }
 
+/* Campo de agregar alumno(s): permite pegar varias líneas */
+textarea#student-name {
+  height: auto;
+  min-height: 50px;
+  max-height: 220px;
+  padding: 14px;
+  line-height: 1.5;
+  resize: vertical;
+  font-family: inherit;
+  overflow-y: auto;
+}
+.aa-hint {
+  display: block;
+  margin-top: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--c-primary);
+}
+
 /* ── Buttons ────────────────────────────────────────────────── */
 .aa-btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;

@@ -649,24 +649,66 @@ function renderStudentsList() {
 
 // botones del detalle de salón
 function openAddStudent() {
-  document.getElementById('student-name').value = '';
+  const ta   = document.getElementById('student-name');
+  const hint = document.getElementById('student-name-hint');
+  ta.value = '';
+  if (hint) hint.textContent = '';
+  // Actualizar contador de nombres en vivo mientras se escribe/pega
+  ta.oninput = () => {
+    const n = parseStudentNames(ta.value).length;
+    if (hint) hint.textContent = n > 1 ? `Se agregarán ${n} alumnos` : '';
+  };
   openModal('modal-student');
-  setTimeout(() => document.getElementById('student-name').focus(), 320);
+  setTimeout(() => ta.focus(), 320);
+}
+
+// Convierte el texto pegado en una lista limpia de nombres.
+// Separa por saltos de línea, quita numeraciones tipo "1." o "1)",
+// elimina espacios extra y descarta líneas vacías o duplicadas.
+function parseStudentNames(raw) {
+  const seen = new Set();
+  return (raw || '')
+    .split(/\r?\n/)
+    .map(line => line.replace(/^\s*\d+[.)\-:]?\s*/, '').trim())
+    .filter(name => {
+      if (!name) return false;
+      const key = name.toLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
 }
 
 async function saveStudent() {
-  const name = document.getElementById('student-name').value.trim();
-  if (!name) { showToast('Escribe el nombre'); return; }
+  const raw = document.getElementById('student-name').value;
+  const names = parseStudentNames(raw);
+  if (names.length === 0) { showToast('Escribe el nombre'); return; }
   if (!state.currentClassroom) return;
 
   try {
-    await db.collection('classrooms').doc(state.currentClassroom.id)
-      .collection('students').add({
-        name,
+    const studentsRef = db.collection('classrooms')
+      .doc(state.currentClassroom.id).collection('students');
+
+    if (names.length === 1) {
+      await studentsRef.add({
+        name: names[0],
         addedAt: firebase.firestore.FieldValue.serverTimestamp(),
       });
+      showToast('Alumno agregado ✓');
+    } else {
+      // Varios nombres → agregar en lote
+      const batch = db.batch();
+      names.forEach(name => {
+        batch.set(studentsRef.doc(), {
+          name,
+          addedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        });
+      });
+      await batch.commit();
+      showToast(`${names.length} alumnos agregados ✓`);
+    }
+
     closeModal('modal-student');
-    showToast('Alumno agregado ✓');
     await loadStudents(state.currentClassroom.id);
     updateDetailStats();
   } catch (e) {
