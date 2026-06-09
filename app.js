@@ -1251,15 +1251,20 @@ function renderSessionDetail(session) {
   set('session-stat-pct',     pct + '%');
 
   // Listas
+  const lateIds         = session.lateStudents || [];
   const absentStudents  = state.students.filter(s => absentIds.includes(s.id));
-  const presentStudents = state.students.filter(s => !absentIds.includes(s.id));
+  const lateStudents    = state.students.filter(s => lateIds.includes(s.id));
+  const presentStudents = state.students.filter(s => !absentIds.includes(s.id) && !lateIds.includes(s.id));
 
   renderDetailPersonList('detail-absent-list',  absentStudents,  'absent');
+  renderDetailPersonList('detail-late-list',    lateStudents,    'late');
   renderDetailPersonList('detail-present-list', presentStudents, 'present');
 
-  // Ocultar sección vacía
+  // Ocultar secciones vacías
   document.getElementById('detail-absent-section')
     ?.classList.toggle('hidden', absentStudents.length === 0);
+  document.getElementById('detail-late-section')
+    ?.classList.toggle('hidden', lateStudents.length === 0);
 }
 
 function renderDetailPersonList(containerId, students, kind) {
@@ -1283,7 +1288,9 @@ function renderDetailPersonList(containerId, students, kind) {
     const bg    = AVATAR_COLORS[i % AVATAR_COLORS.length];
     const badge = kind === 'absent'
       ? `<span class="aa-badge absent">✗ Ausente</span>`
-      : `<span class="aa-badge present">✓ Presente</span>`;
+      : kind === 'late'
+        ? `<span class="aa-badge" style="background:#FEF3C7;color:#92400E;">⏰ Tarde</span>`
+        : `<span class="aa-badge present">✓ Presente</span>`;
     const num = numById[s.id] ? `<b style="min-width:24px;text-align:right;color:var(--c-text-2);font-size:13px;">${numById[s.id]}.</b>` : '';
     return `
       <div class="aa-srow" style="cursor:default;">
@@ -1444,9 +1451,11 @@ async function downloadPDF() {
   const doc         = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
   const session     = state.currentSession;
   const classroom   = state.currentClassroom;
-  const absentIds   = session.absentStudents || [];
+  const absentIds   = getAbsentIds(session);
+  const lateIds     = session.lateStudents || [];
 
   const C_PRIMARY = [67, 97, 238];
+  const C_AMBER   = [217, 119, 6];
   const C_GREEN   = [5, 150, 105];
   const C_RED     = [220, 38, 38];
   const C_DARK    = [26, 26, 46];
@@ -1514,27 +1523,33 @@ async function downloadPDF() {
   const presentCount = total - absentCount;
   const pct          = total > 0 ? Math.round((presentCount / total) * 100) : 100;
 
-  [
+  const stats = [
     { label: 'Total',      value: total,        color: C_PRIMARY },
     { label: 'Presentes',  value: presentCount, color: C_GREEN },
+  ];
+  if (lateIds.length) stats.push({ label: 'Tarde', value: lateIds.length, color: C_AMBER });
+  stats.push(
     { label: 'Ausentes',   value: absentCount,  color: C_RED },
     { label: 'Asistencia', value: pct + '%',    color: C_PRIMARY },
-  ].forEach((st, i) => {
-    const x = 14 + i * 46.7;
+  );
+  const boxW = (182 - (stats.length - 1) * 2.7) / stats.length;
+  stats.forEach((st, i) => {
+    const x = 14 + i * (boxW + 2.7);
     doc.setFillColor(...st.color);
-    doc.roundedRect(x, y, 44, 18, 3, 3, 'F');
+    doc.roundedRect(x, y, boxW, 18, 3, 3, 'F');
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(16); doc.setFont('helvetica', 'bold');
-    doc.text(String(st.value), x + 22, y + 10, { align: 'center' });
+    doc.text(String(st.value), x + boxW / 2, y + 10, { align: 'center' });
     doc.setFontSize(8); doc.setFont('helvetica', 'normal');
-    doc.text(st.label, x + 22, y + 16, { align: 'center' });
+    doc.text(st.label, x + boxW / 2, y + 16, { align: 'center' });
   });
   y += 26;
 
   // Tabla
   doc.autoTable({
     head: [['#', 'Estudiante', 'Estado']],
-    body: state.students.map((s, i) => [i + 1, s.name, absentIds.includes(s.id) ? 'Ausente' : 'Presente']),
+    body: state.students.map((s, i) => [i + 1, s.name,
+      absentIds.includes(s.id) ? 'Ausente' : lateIds.includes(s.id) ? 'Tarde' : 'Presente']),
     startY: y,
     margin: { left: 14, right: 14 },
     headStyles: { fillColor: C_PRIMARY, textColor: [255,255,255], fontSize: 10, fontStyle: 'bold' },
@@ -1542,7 +1557,8 @@ async function downloadPDF() {
     alternateRowStyles: { fillColor: C_LIGHT },
     didParseCell(data) {
       if (data.section === 'body' && data.column.index === 2) {
-        data.cell.styles.textColor = data.cell.raw === 'Ausente' ? C_RED : C_GREEN;
+        data.cell.styles.textColor = data.cell.raw === 'Ausente' ? C_RED
+          : data.cell.raw === 'Tarde' ? C_AMBER : C_GREEN;
         data.cell.styles.fontStyle = 'bold';
       }
     },

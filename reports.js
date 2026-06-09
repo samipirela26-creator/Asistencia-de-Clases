@@ -34,6 +34,12 @@ function rFileDate() {
 function rSafeFilename(str) {
   return (str || 'AsistApp').replace(/[^a-z0-9]/gi, '_');
 }
+// Marca de asistencia de un alumno en una sesión: A (ausente), T (tarde) o P (presente)
+function rMark(session, studentId) {
+  if (getAbsentIds(session).includes(studentId)) return 'A';
+  if ((session.lateStudents || []).includes(studentId)) return 'T';
+  return 'P';
+}
 
 // ── Generador de QR como Data URL ────────────────────────────
 // Crea un QR en un canvas temporal y devuelve una Promise<string> con el dataURL PNG
@@ -316,7 +322,7 @@ async function generateWeeklyPDF() {
     const body = students.map((st, i) => {
       let absent = 0;
       const row = [i + 1, st.name];
-      weekSessions.forEach(s => { const a = getAbsentIds(s).includes(st.id); if (a) absent++; row.push(a ? 'A' : 'P'); });
+      weekSessions.forEach(s => { const m = rMark(s, st.id); if (m === 'A') absent++; row.push(m); });
       const pct = rPct(weekSessions.length - absent, weekSessions.length);
       row.push(weekSessions.length - absent, absent, pct + '%');
       return row;
@@ -347,6 +353,7 @@ async function generateWeeklyPDF() {
       didParseCell(data) {
         if (data.section !== 'body') return;
         if (data.cell.raw === 'A') { data.cell.styles.textColor = R_RED; data.cell.styles.fontStyle = 'bold'; }
+        if (data.cell.raw === 'T') { data.cell.styles.textColor = R_YELLOW; data.cell.styles.fontStyle = 'bold'; }
         else if (data.cell.raw === 'P') { data.cell.styles.textColor = R_GREEN; }
         if (data.column.index === weekSessions.length + 4 && data.row.index < body.length - 1) {
           const pct = parseInt(data.cell.raw); if (!isNaN(pct)) data.cell.styles.textColor = rColorPct(pct);
@@ -400,7 +407,7 @@ async function generateWeeklyExcel() {
     const rows = students.map((st, i) => {
       let absent = 0;
       const cells = [i + 1, st.name];
-      weekSessions.forEach(s => { const a = getAbsentIds(s).includes(st.id); if(a) absent++; cells.push(a ? 'A' : 'P'); });
+      weekSessions.forEach(s => { const m = rMark(s, st.id); if (m === 'A') absent++; cells.push(m); });
       cells.push(weekSessions.length - absent, absent, rPct(weekSessions.length - absent, weekSessions.length) + '%');
       return cells;
     });
@@ -465,7 +472,7 @@ async function generateMonthlyPDF() {
     const body = students.map((st, i) => {
       let absent = 0;
       const row = [i + 1, st.name];
-      monthSessions.forEach(s => { const a = getAbsentIds(s).includes(st.id); if(a) absent++; row.push(a?'A':'P'); });
+      monthSessions.forEach(s => { const m = rMark(s, st.id); if (m === 'A') absent++; row.push(m); });
       const pct = rPct(monthSessions.length - absent, monthSessions.length);
       row.push(monthSessions.length - absent, absent, pct + '%');
       return row;
@@ -494,6 +501,7 @@ async function generateMonthlyPDF() {
       didParseCell(data) {
         if (data.section !== 'body') return;
         if (data.cell.raw === 'A') { data.cell.styles.textColor = R_RED; data.cell.styles.fontStyle = 'bold'; }
+        if (data.cell.raw === 'T') { data.cell.styles.textColor = R_YELLOW; data.cell.styles.fontStyle = 'bold'; }
         else if (data.cell.raw === 'P') { data.cell.styles.textColor = R_GREEN; }
         if (data.column.index === monthSessions.length + 4 && data.row.index < body.length - 1) {
           const pct = parseInt(data.cell.raw); if (!isNaN(pct)) data.cell.styles.textColor = rColorPct(pct);
@@ -536,7 +544,7 @@ async function generateMonthlyExcel() {
     const rows = students.map((st, i) => {
       let absent = 0;
       const cells = [i + 1, st.name];
-      monthSessions.forEach(s => { const a = getAbsentIds(s).includes(st.id); if(a) absent++; cells.push(a?'A':'P'); });
+      monthSessions.forEach(s => { const m = rMark(s, st.id); if (m === 'A') absent++; cells.push(m); });
       cells.push(monthSessions.length - absent, absent, rPct(monthSessions.length - absent, monthSessions.length) + '%');
       return cells;
     });
@@ -620,12 +628,13 @@ async function generateStudentReportPDF(studentId) {
     doc.autoTable({
       head: [['Fecha', 'Tema', 'Estado', 'Justificación']],
       body: sessions.map(s => {
-        const absent = getAbsentIds(s).includes(studentId);
+        const mark   = rMark(s, studentId);
+        const absent = mark === 'A';
         const justif = absent ? (getJustification(s, studentId) || '—') : '—';
         return [
           tsToDate(s.date).toLocaleDateString('es-ES', { day:'2-digit', month:'2-digit', year:'numeric' }),
           s.topic || 'Sin tema',
-          absent ? 'Ausente' : 'Presente',
+          absent ? 'Ausente' : mark === 'T' ? 'Tarde' : 'Presente',
           justif,
         ];
       }),
@@ -637,7 +646,8 @@ async function generateStudentReportPDF(studentId) {
       columnStyles: { 0:{cellWidth:26}, 2:{cellWidth:22, halign:'center'}, 3:{cellWidth:52} },
       didParseCell(data) {
         if (data.section === 'body' && data.column.index === 2) {
-          data.cell.styles.textColor = data.cell.raw === 'Ausente' ? R_RED : R_GREEN;
+          data.cell.styles.textColor = data.cell.raw === 'Ausente' ? R_RED
+            : data.cell.raw === 'Tarde' ? R_YELLOW : R_GREEN;
           data.cell.styles.fontStyle = 'bold';
         }
       },
@@ -816,7 +826,7 @@ async function generateFullExport() {
       const matRows = students.map((st, i) => {
         let ab = 0;
         const cells = [i+1, st.name];
-        sessions.forEach(s => { const a = getAbsentIds(s).includes(st.id); if(a) ab++; cells.push(a?'A':'P'); });
+        sessions.forEach(s => { const m = rMark(s, st.id); if (m === 'A') ab++; cells.push(m); });
         cells.push(sessions.length-ab, ab, rPct(sessions.length-ab,sessions.length)+'%');
         return cells;
       });
