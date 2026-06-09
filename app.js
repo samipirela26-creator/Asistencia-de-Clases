@@ -1270,13 +1270,21 @@ function renderDetailPersonList(containerId, students, kind) {
     return;
   }
 
+  // Número de lista: posición en la lista completa ordenada alfabéticamente
+  const sorted = [...state.students].sort((a, b) =>
+    (a.name || '').localeCompare(b.name || '', 'es', { sensitivity: 'base' }));
+  const numById = {};
+  sorted.forEach((s, idx) => { numById[s.id] = idx + 1; });
+
   el.innerHTML = students.map((s, i) => {
     const bg    = AVATAR_COLORS[i % AVATAR_COLORS.length];
     const badge = kind === 'absent'
       ? `<span class="aa-badge absent">✗ Ausente</span>`
       : `<span class="aa-badge present">✓ Presente</span>`;
+    const num = numById[s.id] ? `<b style="min-width:24px;text-align:right;color:var(--c-text-2);font-size:13px;">${numById[s.id]}.</b>` : '';
     return `
       <div class="aa-srow" style="cursor:default;">
+        ${num}
         <div class="aa-avatar sm" style="background:${bg}">${initials(s.name)}</div>
         <span class="srow-name">${esc(s.name)}</span>
         ${badge}
