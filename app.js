@@ -138,7 +138,13 @@ function renderTodayDate() {
 }
 
 function todayISO() {
-  return new Date().toISOString().split('T')[0];
+  return toLocalISO(new Date());
+}
+
+// Fecha ISO (YYYY-MM-DD) en hora LOCAL, no UTC.
+// toISOString() usa UTC: después de las 8pm (UTC-4) devolvía "mañana".
+function toLocalISO(d) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
 // ════════════════════════════════════
@@ -1061,7 +1067,7 @@ function renderSessionDetail(session) {
   }
 
   // Stats
-  const absentIds    = session.absentStudents || [];
+  const absentIds    = getAbsentIds(session);
   const total        = session.totalStudents  || state.students.length;
   const absentCount  = absentIds.length;
   const presentCount = total - absentCount;
@@ -1648,7 +1654,7 @@ function formatDateLong(ts) {
 }
 
 function isoFromTimestamp(ts) {
-  return tsToDate(ts).toISOString().split('T')[0];
+  return toLocalISO(tsToDate(ts));
 }
 
 function hashStr(str) {
@@ -1696,7 +1702,7 @@ async function loadDashboard() {
       // — Stats de hoy —
       const todaySess = sessions.find(s => isoFromTimestamp(s.date) === today);
       if (todaySess) {
-        const absent  = (todaySess.absentStudents || []).length;
+        const absent  = getAbsentIds(todaySess).length;
         const total   = todaySess.totalStudents || totalStudents;
         todayClasses++;
         todayTotal   += total;
@@ -1715,7 +1721,7 @@ async function loadDashboard() {
       if (monthSess.length > 0) {
         let mPresent = 0, mTotal = 0;
         monthSess.forEach(s => {
-          const absent = (s.absentStudents || []).length;
+          const absent = getAbsentIds(s).length;
           const tot    = s.totalStudents || totalStudents;
           mPresent += tot - absent;
           mTotal   += tot;
@@ -1727,7 +1733,7 @@ async function loadDashboard() {
       // — Alertas: alumnos con N+ ausencias (últimas 10 clases) —
       const absentCounts = {};
       sessions.slice(0, 10).forEach(s => {
-        (s.absentStudents || []).forEach(sid => {
+        getAbsentIds(s).forEach(sid => {
           absentCounts[sid] = (absentCounts[sid] || 0) + 1;
         });
       });
@@ -2222,7 +2228,7 @@ function renderAttendanceCalendar(sessions, studentId) {
   for (let i = 29; i >= 0; i--) {
     const d = new Date(today);
     d.setDate(today.getDate() - i);
-    const iso    = d.toISOString().split('T')[0];
+    const iso    = toLocalISO(d);
     const status = dateMap[iso] || 'none';
     cells.push({ day: d.getDate(), iso, status });
   }
@@ -2404,8 +2410,9 @@ async function saveJustification() {
     const updated = raw.map(a => {
       const sid = typeof a === 'string' ? a : a.studentId;
       if (sid === studentId) {
+        // OJO: serverTimestamp() NO se permite dentro de arrays en Firestore.
         return { studentId: sid, justification: text,
-                 justifiedAt: firebase.firestore.FieldValue.serverTimestamp() };
+                 justifiedAt: firebase.firestore.Timestamp.now() };
       }
       return typeof a === 'string' ? { studentId: a } : a;
     });
@@ -2574,7 +2581,7 @@ async function buildGlobalIndex() {
       // Contar ausencias por alumno
       const absentCounts = {};
       sessSnap.docs.forEach(d => {
-        (d.data().absentStudents || []).forEach(sid => {
+        getAbsentIds(d.data()).forEach(sid => {
           absentCounts[sid] = (absentCounts[sid] || 0) + 1;
         });
       });
@@ -3294,7 +3301,7 @@ async function evaluateAlerts(classroomId) {
     sessions.forEach(s => {
       const d = tsToDate(s.date);
       if (d.getMonth() === thisMonth && d.getFullYear() === thisYear) {
-        (s.absentStudents || []).forEach(sid => {
+        getAbsentIds(s).forEach(sid => {
           monthlyAbsences[sid] = (monthlyAbsences[sid] || 0) + 1;
         });
       }
@@ -3325,7 +3332,7 @@ async function evaluateAlerts(classroomId) {
         const recent = sessions.slice(0, 10);
         if (recent.length < 3) return;
         const lastThree = recent.slice(0, 3);
-        const absentIn3 = lastThree.every(s => (s.absentStudents || []).includes(st.id));
+        const absentIn3 = lastThree.every(s => getAbsentIds(s).includes(st.id));
         if (absentIn3) {
           alerts.push({
             id:            `pattern_${classroomId}_${st.id}`,
@@ -3384,10 +3391,10 @@ async function evaluateAlerts(classroomId) {
       const recent5 = sessions.slice(0, recoveryStreak);
       if (recent5.length >= recoveryStreak) {
         students.forEach(st => {
-          const neverAbsent = recent5.every(s => !(s.absentStudents || []).includes(st.id));
+          const neverAbsent = recent5.every(s => !getAbsentIds(s).includes(st.id));
           // Solo alertar si antes había ausencias (para que sea una recuperación real)
           const hadAbsences = sessions.slice(recoveryStreak).some(
-            s => (s.absentStudents || []).includes(st.id)
+            s => getAbsentIds(s).includes(st.id)
           );
           if (neverAbsent && hadAbsences) {
             alerts.push({

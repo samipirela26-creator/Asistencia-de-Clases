@@ -29,7 +29,7 @@ function rColorPct(pct) {
   return pct >= 90 ? R_GREEN : pct >= 75 ? R_YELLOW : R_RED;
 }
 function rFileDate() {
-  return new Date().toISOString().split('T')[0];
+  return toLocalISO(new Date());
 }
 function rSafeFilename(str) {
   return (str || 'AsistApp').replace(/[^a-z0-9]/gi, '_');
@@ -277,7 +277,7 @@ async function generateWeeklyPDF() {
   const weekInput = document.getElementById('rpt-week-input');
   const weekStartISO = weekInput ? weekInput.value : (() => {
     const d = new Date(); d.setDate(d.getDate() - d.getDay() + 1);
-    return d.toISOString().split('T')[0];
+    return toLocalISO(d);
   })();
   if (!weekStartISO) { showToast('Selecciona una semana'); return; }
 
@@ -287,7 +287,7 @@ async function generateWeeklyPDF() {
     const weekStart = new Date(weekStartISO + 'T00:00:00');
     const days = Array.from({ length: 7 }, (_, i) => {
       const d = new Date(weekStart); d.setDate(d.getDate() + i);
-      return d.toISOString().split('T')[0];
+      return toLocalISO(d);
     });
 
     const { students, sessions } = await rFetchData(cls.id);
@@ -372,7 +372,7 @@ async function generateWeeklyExcel() {
   const weekInput = document.getElementById('rpt-week-input');
   const weekStartISO = weekInput ? weekInput.value : (() => {
     const d = new Date(); d.setDate(d.getDate() - d.getDay() + 1);
-    return d.toISOString().split('T')[0];
+    return toLocalISO(d);
   })();
   if (!weekStartISO) { showToast('Selecciona una semana'); return; }
 
@@ -382,7 +382,7 @@ async function generateWeeklyExcel() {
     const weekStart = new Date(weekStartISO + 'T00:00:00');
     const days = Array.from({ length: 7 }, (_, i) => {
       const d = new Date(weekStart); d.setDate(d.getDate() + i);
-      return d.toISOString().split('T')[0];
+      return toLocalISO(d);
     });
 
     const { students, sessions } = await rFetchData(cls.id);
@@ -1011,7 +1011,7 @@ function loadReportsView() {
     const now = new Date();
     const day = now.getDay() || 7; // lunes = 1
     const mon = new Date(now); mon.setDate(now.getDate() - day + 1);
-    weekInp.value = mon.toISOString().split('T')[0];
+    weekInp.value = toLocalISO(mon);
   }
 
   // Renderizar lista de alumnos para reportes individuales
