@@ -1,0 +1,47 @@
+rules_version = '2';
+
+// Reglas de seguridad de AsistApp.
+// Publícalas en: Firebase Console → Firestore Database → Reglas
+// (o con `firebase deploy --only firestore:rules`).
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+    function isOwner(ownerId) {
+      return signedIn() && request.auth.uid == ownerId;
+    }
+
+    // ── Salones: solo el dueño ──────────────────────────────
+    match /classrooms/{classroomId} {
+      allow read, update, delete: if isOwner(resource.data.ownerId);
+      allow create: if isOwner(request.resource.data.ownerId);
+
+      // Subcolecciones (alumnos y sesiones): heredan el dueño del salón
+      match /{sub=**} {
+        allow read, write: if signedIn()
+          && get(/databases/$(database)/documents/classrooms/$(classroomId)).data.ownerId == request.auth.uid;
+      }
+    }
+
+    // ── Alertas: solo el dueño ──────────────────────────────
+    match /alerts/{classroomId} {
+      allow read, update, delete: if isOwner(resource.data.ownerId);
+      allow create: if isOwner(request.resource.data.ownerId);
+    }
+
+    // ── Perfil y configuración del usuario ──────────────────
+    match /users/{userId} {
+      allow read, write: if signedIn() && request.auth.uid == userId;
+      match /{sub=**} {
+        allow read, write: if signedIn() && request.auth.uid == userId;
+      }
+    }
+
+    // Todo lo demás: denegado
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

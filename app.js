@@ -83,7 +83,8 @@ async function initApp() {
   renderTodayDate();
   initSearch();
   initOfflineDetection();
-  await loadSettings();
+  // Las settings se cargan en startApp(), cuando ya se conoce el usuario.
+  loadSettingsLocal();
 
   // F7: Escuchar cambios de autenticación
   if (auth) {
@@ -111,6 +112,7 @@ function onAuthChanged(user) {
 function startApp() {
   // Mostrar nav, suscribir salones, cargar alertas
   document.getElementById('bottom-nav')?.classList.remove('hidden');
+  loadSettings().catch(() => {});
   subscribeClassrooms();
   navigateTo('home');
   setTimeout(() => loadAllAlerts().catch(() => {}), 3000);
@@ -211,15 +213,19 @@ function navigateTo(viewName, data = null) {
     }
 
     case 'take-attendance': {
-      state.absentIds = new Set();
-      state.lateIds   = new Set();
-      document.getElementById('attendance-date').value  = todayISO();
-      document.getElementById('attendance-topic').value = '';
-      document.getElementById('attendance-notes').value = '';
+      const ed = editingSession; // si venimos de "Editar clase"
+      state.absentIds = new Set(ed ? getAbsentIds(ed) : []);
+      state.lateIds   = new Set(ed ? (ed.lateStudents || []) : []);
+      document.getElementById('attendance-date').value  = ed ? isoFromTimestamp(ed.date) : todayISO();
+      document.getElementById('attendance-topic').value = ed ? (ed.topic || '') : '';
+      document.getElementById('attendance-notes').value = ed ? (ed.notes || '') : '';
+      const titleEl = document.getElementById('take-att-title');
+      if (titleEl) titleEl.textContent = ed ? 'Editar Asistencia' : 'Tomar Asistencia';
       // Mostrar nombre del salón en el header
       const attSub = document.getElementById('take-att-classroom');
       if (attSub && state.currentClassroom) attSub.textContent = state.currentClassroom.name;
       renderAttendanceStudents();
+      applyAttendanceMarks();
       updateAbsentCount();
       break;
     }
@@ -924,8 +930,58 @@ function openSession(sessionId) {
 // ════════════════════════════════════
 // TOMAR ASISTENCIA
 // ════════════════════════════════════
+let editingSession = null; // sesión que se está editando (null = nueva)
+
 function openTakeAttendance() {
+  editingSession = null;
   navigateTo('take-attendance');
+}
+
+// Editar una clase ya guardada: reusa la vista de tomar asistencia
+function openEditSession() {
+  const s = state.currentSession;
+  if (!s || !state.currentClassroom) return;
+  editingSession = s;
+  navigateTo('take-attendance');
+}
+
+// Marca visualmente ausentes/tardes ya registrados (modo edición)
+function applyAttendanceMarks() {
+  const mark = (id, cls, badge, txt, bg, fg) => {
+    const item   = document.getElementById(`att-item-${id}`);
+    const status = document.getElementById(`att-status-${id}`);
+    const avatar = document.getElementById(`att-avatar-${id}`);
+    item?.classList.add(cls);
+    if (status) { status.className = `aa-badge ${badge}`; status.textContent = txt; }
+    if (avatar) { avatar.style.background = bg; avatar.style.color = fg; }
+  };
+  state.absentIds.forEach(id => mark(id, 'absent', 'absent', '✗ Ausente', '#FCA5A5', '#7f1d1d'));
+  (state.lateIds || new Set()).forEach(id => mark(id, 'late', 'late', '🕐 Tarde', '#FDE68A', '#92400E'));
+}
+
+// Eliminar la clase abierta en detalle de sesión
+function confirmDeleteSession() {
+  const s   = state.currentSession;
+  const cls = state.currentClassroom;
+  if (!s || !cls) return;
+  showConfirm(
+    'Eliminar Clase',
+    `¿Eliminar la clase del ${formatDateLong(s.date)}?\nEsta acción no se puede deshacer.`,
+    async () => {
+      try {
+        await db.collection('classrooms').doc(cls.id)
+          .collection('sessions').doc(s.id).delete();
+        closeModal('modal-confirm');
+        showToast('Clase eliminada');
+        state.currentSession = null;
+        navigateTo('classroom-detail');
+        switchSegment('history');
+      } catch (e) {
+        console.error(e);
+        showToast('Error al eliminar');
+      }
+    }
+  );
 }
 
 function renderAttendanceStudents() {
@@ -1023,11 +1079,28 @@ async function saveAttendance() {
     // No usamos await en la escritura: si estamos offline, Firestore no
     // resuelve la promesa hasta reconectar y la app se quedaría colgada.
     // El dato se guarda localmente y se sincroniza solo al volver la red.
-    const ref = db.collection('classrooms').doc(state.currentClassroom.id)
-      .collection('sessions').doc();
-    ref.set(sessionData).catch(err => {
-      console.error('[Sync] Error al sincronizar asistencia:', err);
-    });
+    const sessionsCol = db.collection('classrooms').doc(state.currentClassroom.id)
+      .collection('sessions');
+
+    if (editingSession) {
+      // EDICIÓN: actualizar la sesión existente conservando justificaciones
+      const justifById = {};
+      (editingSession.absentStudents || []).forEach(a => {
+        if (typeof a === 'object' && a.justification) justifById[a.studentId] = a;
+      });
+      sessionData.absentStudents = Array.from(state.absentIds)
+        .map(id => justifById[id] || id);
+      delete sessionData.createdAt;
+      sessionData.updatedAt = firebase.firestore.FieldValue.serverTimestamp();
+      sessionsCol.doc(editingSession.id).update(sessionData).catch(err => {
+        console.error('[Sync] Error al actualizar asistencia:', err);
+      });
+      editingSession = null;
+    } else {
+      sessionsCol.doc().set(sessionData).catch(err => {
+        console.error('[Sync] Error al sincronizar asistencia:', err);
+      });
+    }
 
     showToast(navigator.onLine ? 'Asistencia guardada ✓' : 'Guardada offline — se sincronizará al reconectar ✓');
     navigateTo('classroom-detail', state.currentClassroom);
@@ -1589,9 +1662,28 @@ function importBackup(input) {
       showToast('Restaurando…');
       const uid = auth?.currentUser?.uid || null;
 
+      // Al exportar, los Timestamps de Firestore se serializan como
+      // {seconds, nanoseconds}. Hay que reconstruirlos al restaurar,
+      // si no las fechas quedan como mapas y rompen el orden/formato.
+      const reviveTimestamps = (obj) => {
+        if (!obj || typeof obj !== 'object') return obj;
+        const out = Array.isArray(obj) ? [] : {};
+        for (const [k, v] of Object.entries(obj)) {
+          if (v && typeof v === 'object' && typeof v.seconds === 'number'
+              && typeof v.nanoseconds === 'number' && Object.keys(v).length === 2) {
+            out[k] = new firebase.firestore.Timestamp(v.seconds, v.nanoseconds);
+          } else if (v && typeof v === 'object') {
+            out[k] = reviveTimestamps(v);
+          } else {
+            out[k] = v;
+          }
+        }
+        return out;
+      };
+
       let restored = 0;
       for (const c of backup.classrooms) {
-        const cData = { ...(c.data || {}) };
+        const cData = reviveTimestamps({ ...(c.data || {}) });
         if (uid) cData.ownerId = uid;
         const newRef = await db.collection('classrooms').add(cData);
 
@@ -1600,7 +1692,7 @@ function importBackup(input) {
           for (let i = 0; i < (items?.length || 0); i += 400) {
             const batch = db.batch();
             items.slice(i, i + 400).forEach(it => {
-              batch.set(newRef.collection(subName).doc(), it.data || {});
+              batch.set(newRef.collection(subName).doc(), reviveTimestamps(it.data || {}));
             });
             await batch.commit();
           }
@@ -1632,7 +1724,8 @@ function initials(name) {
 function esc(str) {
   return String(str ?? '')
     .replace(/&/g, '&amp;').replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    .replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 function tsToDate(ts) {
@@ -2437,11 +2530,20 @@ async function saveJustification() {
 // ════════════════════════════════════
 let alertThreshold = 3; // default (últimas 10 sesiones)
 
+// Referencia a la configuración DEL USUARIO actual (antes era un doc
+// global compartido entre todos los docentes — fuga de datos).
+function settingsRef() {
+  const uid = auth?.currentUser?.uid;
+  if (!db || !uid) return null;
+  return db.collection('users').doc(uid).collection('settings').doc('alertConfig');
+}
+
 async function loadSettings() {
-  // Intentar desde Firebase
-  if (db) {
+  // Intentar desde Firebase (config propia del usuario)
+  const ref = settingsRef();
+  if (ref) {
     try {
-      const doc = await db.collection('settings').doc('alertConfig').get();
+      const doc = await ref.get();
       if (doc.exists) {
         const d = doc.data();
         if (d.absenceThreshold)    alertThreshold    = d.absenceThreshold;
@@ -2455,7 +2557,11 @@ async function loadSettings() {
       }
     } catch { /* ignorar */ }
   }
-  // Fallback a localStorage
+  loadSettingsLocal();
+}
+
+// Fallback a localStorage (antes del login o sin conexión)
+function loadSettingsLocal() {
   const stored = parseInt(localStorage.getItem('alertThreshold'));
   if (!isNaN(stored) && stored > 0) alertThreshold = stored;
   const storedM = parseInt(localStorage.getItem('monthlyThreshold'));
@@ -2539,9 +2645,10 @@ async function saveSettings() {
   localStorage.setItem('enableClassroomAlert', enableClassroomAlert);
   localStorage.setItem('enableRecoveryAlert', enableRecoveryAlert);
 
-  if (db) {
+  const ref = settingsRef();
+  if (ref) {
     try {
-      await db.collection('settings').doc('alertConfig').set({
+      await ref.set({
         absenceThreshold: val,
         monthlyThreshold: valM,
         enablePattern:    enablePatternAlert,
@@ -2921,6 +3028,7 @@ function openSwipeAttendance() {
   }
 
   // Resetear estado
+  editingSession  = null; // swipe siempre crea sesión nueva
   swipe.students  = [...state.students];
   swipe.decisions = {};
   swipe.history   = [];
@@ -3420,6 +3528,7 @@ async function evaluateAlerts(classroomId) {
       try {
         await db.collection('alerts').doc(classroomId).set({
           classroomId,
+          ownerId:   auth?.currentUser?.uid || null,
           alerts,
           updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
         });
@@ -3440,7 +3549,11 @@ async function evaluateAlerts(classroomId) {
 async function loadAllAlerts() {
   if (!db) return [];
   try {
-    const snap = await db.collection('alerts').get();
+    // Solo las alertas del docente actual (antes se descargaban TODAS)
+    const uid = auth?.currentUser?.uid;
+    let query = db.collection('alerts');
+    if (uid) query = query.where('ownerId', '==', uid);
+    const snap = await query.get();
     _alertsCache = [];
     snap.forEach(doc => {
       const data = doc.data();

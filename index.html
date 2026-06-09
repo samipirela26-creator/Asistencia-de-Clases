@@ -516,7 +516,7 @@
     <div class="app-header">
       <button class="btn-back" onclick="navigateTo('classroom-detail')">←</button>
       <div style="text-align:center;flex:1;">
-        <div class="header-title">Tomar Asistencia</div>
+        <div class="header-title" id="take-att-title">Tomar Asistencia</div>
         <div style="font-size:11px;color:var(--c-text-2);margin-top:1px;" id="take-att-classroom"></div>
       </div>
       <div style="width:36px;"></div>
@@ -571,7 +571,11 @@
     <div class="dark-header">
       <div class="topbar">
         <button class="iconbtn btn-back" id="session-back-btn">←</button>
-        <button class="iconbtn" onclick="downloadPDF()">⬇️</button>
+        <div style="display:flex;gap:8px;">
+          <button class="iconbtn" onclick="openEditSession()" title="Editar clase">✏️</button>
+          <button class="iconbtn" onclick="confirmDeleteSession()" title="Eliminar clase">🗑️</button>
+          <button class="iconbtn" onclick="downloadPDF()">⬇️</button>
+        </div>
       </div>
       <div class="eyebrow">Detalle de Clase</div>
       <h1 id="session-detail-date">—</h1>
