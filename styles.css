@@ -456,6 +456,20 @@ input, textarea, button, select { font-family: inherit; }
   transition: border-color .15s, background .15s;
 }
 .aa-input::placeholder, .aa-textarea::placeholder { color: var(--c-text-muted); }
+
+/* Fix iOS: el input de fecha nativo ignora altura/alineación */
+input[type="date"].aa-input {
+  -webkit-appearance: none;
+  appearance: none;
+  display: flex;
+  align-items: center;
+  min-height: 50px;
+  text-align: left;
+}
+input[type="date"].aa-input::-webkit-date-and-time-value {
+  text-align: left;
+  margin: 0;
+}
 .aa-input:focus, .aa-textarea:focus { border-color: var(--c-primary); background: #fff; }
 .aa-textarea { height: auto; padding: 12px 14px; resize: none; line-height: 1.4; }
 
