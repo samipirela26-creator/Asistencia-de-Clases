@@ -648,6 +648,9 @@ async function loadStudents(classroomId) {
   try {
     const snap    = await db.collection('classrooms').doc(classroomId)
       .collection('students').orderBy('name').get();
+    // Evitar condición de carrera: si el usuario ya cambió de salón
+    // mientras cargaba, ignorar este resultado (era de otro salón).
+    if (state.currentClassroom && state.currentClassroom.id !== classroomId) return;
     state.students = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     renderStudentsList();
   } catch (e) { console.error('Error estudiantes:', e); }
@@ -859,6 +862,9 @@ async function loadSessions(classroomId) {
   try {
     const snap    = await db.collection('classrooms').doc(classroomId)
       .collection('sessions').orderBy('date', 'desc').get();
+    // Evitar condición de carrera: si el usuario ya cambió de salón
+    // mientras cargaba, ignorar este resultado (era de otro salón).
+    if (state.currentClassroom && state.currentClassroom.id !== classroomId) return;
     state.sessions = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     renderSessionsList();
   } catch (e) { console.error('Error sesiones:', e); }
