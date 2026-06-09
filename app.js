@@ -152,7 +152,41 @@ function toLocalISO(d) {
 // ════════════════════════════════════
 // NAVEGACIÓN
 // ════════════════════════════════════
+// ── Protección: no salir de "pasar lista" con cambios sin guardar ──
+let _skipAttendanceGuard = false;
+
+function attendanceHasChanges() {
+  if (state.currentView === 'take-attendance') {
+    return state.absentIds.size > 0 || (state.lateIds?.size || 0) > 0 ||
+      !!document.getElementById('attendance-topic')?.value.trim() ||
+      !!document.getElementById('attendance-notes')?.value.trim();
+  }
+  if (state.currentView === 'swipe-attendance') {
+    return Object.keys(swipe.decisions).length > 0;
+  }
+  return false;
+}
+
 function navigateTo(viewName, data = null) {
+  // Si está pasando lista y hay cambios, confirmar antes de salir
+  const guarded = ['take-attendance', 'swipe-attendance'];
+  if (!_skipAttendanceGuard
+      && guarded.includes(state.currentView)
+      && viewName !== state.currentView
+      && attendanceHasChanges()) {
+    showConfirm(
+      '¿Salir sin guardar?',
+      'La asistencia que estás pasando se perderá si sales ahora.',
+      () => {
+        closeModal('modal-confirm');
+        _skipAttendanceGuard = true;
+        navigateTo(viewName, data);
+        _skipAttendanceGuard = false;
+      }
+    );
+    return;
+  }
+
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
 
@@ -688,13 +722,22 @@ function renderStudentsList() {
         <div class="aa-avatar sm" style="background:${bg}">${initials(s.name)}</div>
         <span class="srow-name">${esc(s.name)}</span>
         <span class="aa-badge none" style="cursor:pointer"
+              onclick="event.stopPropagation();openEditStudent('${s.id}')">✏️</span>
+        <span class="aa-badge none" style="cursor:pointer"
               onclick="event.stopPropagation();confirmDeleteStudent('${s.id}')">✕</span>
       </div>`;
   }).join('');
 }
 
 // botones del detalle de salón
+let editingStudentId = null; // null = agregar; id = editar nombre
+
 function openAddStudent() {
+  editingStudentId = null;
+  const titleEl = document.getElementById('modal-student-title');
+  const btnEl   = document.getElementById('modal-student-btn');
+  if (titleEl) titleEl.textContent = 'Agregar Alumno';
+  if (btnEl)   btnEl.textContent   = 'Agregar';
   const ta   = document.getElementById('student-name');
   const hint = document.getElementById('student-name-hint');
   ta.value = '';
@@ -706,6 +749,24 @@ function openAddStudent() {
   };
   openModal('modal-student');
   setTimeout(() => ta.focus(), 320);
+}
+
+// Editar el nombre de un alumno existente (reusa el modal de agregar)
+function openEditStudent(studentId) {
+  const s = state.students.find(x => x.id === studentId);
+  if (!s) return;
+  editingStudentId = studentId;
+  const titleEl = document.getElementById('modal-student-title');
+  const btnEl   = document.getElementById('modal-student-btn');
+  if (titleEl) titleEl.textContent = 'Editar Alumno';
+  if (btnEl)   btnEl.textContent   = 'Guardar';
+  const ta   = document.getElementById('student-name');
+  const hint = document.getElementById('student-name-hint');
+  ta.value = s.name || '';
+  ta.oninput = null;
+  if (hint) hint.textContent = '';
+  openModal('modal-student');
+  setTimeout(() => { ta.focus(); ta.select?.(); }, 320);
 }
 
 // Convierte el texto pegado en una lista limpia de nombres.
@@ -734,6 +795,16 @@ async function saveStudent() {
   try {
     const studentsRef = db.collection('classrooms')
       .doc(state.currentClassroom.id).collection('students');
+
+    // Modo edición: solo renombrar
+    if (editingStudentId) {
+      await studentsRef.doc(editingStudentId).update({ name: names[0] });
+      editingStudentId = null;
+      showToast('Nombre actualizado ✓');
+      closeModal('modal-student');
+      await loadStudents(state.currentClassroom.id);
+      return;
+    }
 
     if (names.length === 1) {
       await studentsRef.add({
@@ -931,6 +1002,25 @@ function openSession(sessionId) {
 // TOMAR ASISTENCIA
 // ════════════════════════════════════
 let editingSession = null; // sesión que se está editando (null = nueva)
+let _dupOverride   = false; // el usuario confirmó guardar duplicado
+
+// Si ya hay una clase ese día, pide confirmación y devuelve true (frena el guardado).
+// `retry` se llama si el usuario confirma guardar de todos modos.
+function checkDuplicateSession(dateISO, retry) {
+  if (editingSession || _dupOverride) { _dupOverride = false; return false; }
+  const exists = state.sessions.some(s => isoFromTimestamp(s.date) === dateISO);
+  if (!exists) return false;
+  showConfirm(
+    'Clase duplicada',
+    `Ya registraste una clase el ${formatDateLong(new Date(dateISO + 'T12:00:00'))} en este salón.\n¿Guardar otra de todos modos?`,
+    () => {
+      closeModal('modal-confirm');
+      _dupOverride = true;
+      retry();
+    }
+  );
+  return true;
+}
 
 function openTakeAttendance() {
   editingSession = null;
@@ -1065,6 +1155,9 @@ async function saveAttendance() {
   if (!dateVal) { showToast('Selecciona la fecha'); return; }
   if (!topic)   { showToast('Escribe el tema de la clase'); return; }
 
+  // Aviso si ya existe una clase ese día en este salón (evita duplicados)
+  if (checkDuplicateSession(dateVal, () => saveAttendance())) return;
+
   const sessionData = {
     date:           firebase.firestore.Timestamp.fromDate(new Date(dateVal + 'T12:00:00')),
     topic,
@@ -1103,7 +1196,9 @@ async function saveAttendance() {
     }
 
     showToast(navigator.onLine ? 'Asistencia guardada ✓' : 'Guardada offline — se sincronizará al reconectar ✓');
+    _skipAttendanceGuard = true;
     navigateTo('classroom-detail', state.currentClassroom);
+    _skipAttendanceGuard = false;
     await loadSessions(state.currentClassroom.id);
     switchSegment('history');
     // Mostrar números de lista de ausentes para el diario
@@ -3297,6 +3392,9 @@ async function saveSwipeAttendance() {
   if (!dateVal) { showToast('Selecciona la fecha'); return; }
   if (!topic)   { showToast('Escribe el tema de la clase'); return; }
 
+  // Aviso si ya existe una clase ese día en este salón (evita duplicados)
+  if (checkDuplicateSession(dateVal, () => saveSwipeAttendance())) return;
+
   // Construir listas a partir de las decisiones
   const absentStudents = Object.entries(swipe.decisions)
     .filter(([, d]) => d === 'absent').map(([id]) => id);
@@ -3322,7 +3420,9 @@ async function saveSwipeAttendance() {
     });
 
     showToast(navigator.onLine ? 'Asistencia guardada ✓' : 'Guardada offline — se sincronizará al reconectar ✓');
+    _skipAttendanceGuard = true;
     navigateTo('classroom-detail', cls);
+    _skipAttendanceGuard = false;
     await loadSessions(cls.id);
     switchSegment('history');
     // Mostrar números de lista de ausentes para el diario
@@ -3343,21 +3443,28 @@ async function saveSwipeAttendance() {
 
 // ── Cambiar al modo lista (vista tradicional) ────────────
 function switchToListMode() {
-  // Copiar decisiones actuales al estado de la vista de lista
-  state.absentIds = new Set(
-    Object.entries(swipe.decisions)
-      .filter(([, d]) => d === 'absent').map(([id]) => id)
-  );
-  // Copiar campos de metadata si están rellenos
+  // Guardar antes de navegar (navigateTo resetea el estado de la vista)
+  const absentCopy = Object.entries(swipe.decisions)
+    .filter(([, d]) => d === 'absent').map(([id]) => id);
+  const lateCopy = Object.entries(swipe.decisions)
+    .filter(([, d]) => d === 'late').map(([id]) => id);
   const swDate  = document.getElementById('sw-date')?.value;
   const swTopic = document.getElementById('sw-topic')?.value;
   const swNotes = document.getElementById('sw-notes')?.value;
+
+  // Cambio de modo legítimo: los datos se conservan, no pedir confirmación
+  _skipAttendanceGuard = true;
+  navigateTo('take-attendance');
+  _skipAttendanceGuard = false;
+
+  // Restaurar decisiones y metadata DESPUÉS del reset de navigateTo
+  state.absentIds = new Set(absentCopy);
+  state.lateIds   = new Set(lateCopy);
   if (swDate)  { const el = document.getElementById('attendance-date');  if (el) el.value = swDate; }
   if (swTopic) { const el = document.getElementById('attendance-topic'); if (el) el.value = swTopic; }
   if (swNotes) { const el = document.getElementById('attendance-notes'); if (el) el.value = swNotes; }
-
-  navigateTo('take-attendance');
   renderAttendanceStudents();
+  applyAttendanceMarks();
   updateAbsentCount();
 }
 
