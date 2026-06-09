@@ -1437,6 +1437,15 @@ if ('serviceWorker' in navigator) {
     if (!refreshing) { refreshing = true; window.location.reload(); }
   });
 }
+
+// Mostrar la versión real (nombre de la caché del service worker) en el menú
+if ('caches' in window) {
+  caches.keys().then(keys => {
+    const k = keys.find(n => n.startsWith('asistapp-'));
+    const el = document.getElementById('menu-sw-version');
+    if (k && el) el.textContent = k.replace('asistapp-', '');
+  }).catch(() => {});
+}
 </script>
 
 </body>
