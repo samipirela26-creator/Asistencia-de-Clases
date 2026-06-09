@@ -461,6 +461,27 @@ textarea#student-name {
   color: var(--c-primary);
 }
 
+/* Modal de inasistencias para el diario */
+.inas-help {
+  font-size: 13px;
+  color: var(--c-text-2);
+  margin: 0 0 12px;
+  line-height: 1.4;
+}
+.inas-box {
+  background: #F8F9FF;
+  border: 1.5px solid #E8EAFF;
+  border-radius: 12px;
+  padding: 18px 14px;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  color: var(--c-primary);
+  text-align: center;
+  word-break: break-word;
+  user-select: all;
+}
+
 /* ── Buttons ────────────────────────────────────────────────── */
 .aa-btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;

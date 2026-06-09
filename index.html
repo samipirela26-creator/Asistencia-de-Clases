@@ -1292,6 +1292,27 @@
   </div>
 
   <!-- ════════════════════════════════════════════
+       MODAL: Inasistencias para el diario de clases
+       ════════════════════════════════════════════ -->
+  <div id="modal-inasistencias" class="modal-overlay">
+    <div class="aa-sheet">
+      <div class="sheet-handle"></div>
+      <div class="sheet-head">
+        <span class="sheet-title">Inasistencias para el diario</span>
+        <button class="sheet-close" onclick="closeModal('modal-inasistencias')">✕</button>
+      </div>
+      <div class="sheet-body">
+        <p class="inas-help">Números de lista de los alumnos ausentes. Cópialos en la columna <b>INASISTENCIAS</b> del diario de clases.</p>
+        <div class="inas-box" id="inas-numbers">—</div>
+      </div>
+      <div class="sheet-foot">
+        <button class="aa-btn-outline" onclick="closeModal('modal-inasistencias')">Cerrar</button>
+        <button class="aa-btn" onclick="copyInasistencias()">📋 Copiar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════
        MODAL: Importar Excel/CSV
        ════════════════════════════════════════════ -->
   <div id="modal-import" class="modal-overlay">

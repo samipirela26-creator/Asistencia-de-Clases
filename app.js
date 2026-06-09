@@ -965,6 +965,8 @@ async function saveAttendance() {
     navigateTo('classroom-detail', state.currentClassroom);
     await loadSessions(state.currentClassroom.id);
     switchSegment('history');
+    // Mostrar números de lista de ausentes para el diario
+    showInasistenciasModal(sessionData.absentStudents);
 
     // F6: Evaluar alertas en background (no bloqueante)
     evaluateAlerts(state.currentClassroom.id).then(alerts => {
@@ -1342,6 +1344,43 @@ function showToast(msg) {
   el.classList.add('show');
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => el.classList.remove('show'), 3200);
+}
+
+// ════════════════════════════════════
+// INASISTENCIAS PARA EL DIARIO DE CLASES
+// Devuelve los NÚMEROS DE LISTA de los ausentes (posición del alumno
+// en la lista ordenada por nombre, igual que la planilla impresa).
+// ════════════════════════════════════
+function buildAbsentNumbers(absentIds) {
+  const ids = new Set(absentIds || []);
+  // Ordenar igual que la planilla (alfabético por apellido/nombre)
+  const sorted = [...state.students].sort((a, b) =>
+    (a.name || '').localeCompare(b.name || '', 'es', { sensitivity: 'base' }));
+  const nums = [];
+  sorted.forEach((st, idx) => {
+    if (ids.has(st.id)) nums.push(idx + 1);
+  });
+  return nums; // ya en orden ascendente
+}
+
+let _lastInasistencias = '';
+function showInasistenciasModal(absentIds) {
+  const nums = buildAbsentNumbers(absentIds);
+  _lastInasistencias = nums.join('-');
+  const box = document.getElementById('inas-numbers');
+  if (box) box.textContent = nums.length ? _lastInasistencias : 'Sin inasistencias 🎉';
+  openModal('modal-inasistencias');
+}
+
+function copyInasistencias() {
+  if (!_lastInasistencias) { showToast('No hay inasistencias que copiar'); return; }
+  if (navigator.clipboard?.writeText) {
+    navigator.clipboard.writeText(_lastInasistencias)
+      .then(() => showToast('Copiado ✓'))
+      .catch(() => showToast('No se pudo copiar'));
+  } else {
+    showToast('Copia manual: ' + _lastInasistencias);
+  }
 }
 
 // ════════════════════════════════════
@@ -2916,6 +2955,8 @@ async function saveSwipeAttendance() {
     navigateTo('classroom-detail', cls);
     await loadSessions(cls.id);
     switchSegment('history');
+    // Mostrar números de lista de ausentes para el diario
+    showInasistenciasModal(absentStudents);
 
     // F6: Evaluar alertas en background
     evaluateAlerts(cls.id).then(alerts => {
