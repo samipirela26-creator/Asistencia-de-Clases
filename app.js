@@ -957,10 +957,16 @@ async function saveAttendance() {
   };
 
   try {
-    await db.collection('classrooms').doc(state.currentClassroom.id)
-      .collection('sessions').add(sessionData);
+    // No usamos await en la escritura: si estamos offline, Firestore no
+    // resuelve la promesa hasta reconectar y la app se quedaría colgada.
+    // El dato se guarda localmente y se sincroniza solo al volver la red.
+    const ref = db.collection('classrooms').doc(state.currentClassroom.id)
+      .collection('sessions').doc();
+    ref.set(sessionData).catch(err => {
+      console.error('[Sync] Error al sincronizar asistencia:', err);
+    });
 
-    showToast('Asistencia guardada ✓');
+    showToast(navigator.onLine ? 'Asistencia guardada ✓' : 'Guardada offline — se sincronizará al reconectar ✓');
     navigateTo('classroom-detail', state.currentClassroom);
     await loadSessions(state.currentClassroom.id);
     switchSegment('history');
@@ -3098,10 +3104,14 @@ async function saveSwipeAttendance() {
   };
 
   try {
-    await db.collection('classrooms').doc(cls.id)
-      .collection('sessions').add(sessionData);
+    // Sin await: offline Firestore no resuelve hasta reconectar (ver saveAttendance).
+    const ref = db.collection('classrooms').doc(cls.id)
+      .collection('sessions').doc();
+    ref.set(sessionData).catch(err => {
+      console.error('[Sync] Error al sincronizar asistencia:', err);
+    });
 
-    showToast('Asistencia guardada ✓');
+    showToast(navigator.onLine ? 'Asistencia guardada ✓' : 'Guardada offline — se sincronizará al reconectar ✓');
     navigateTo('classroom-detail', cls);
     await loadSessions(cls.id);
     switchSegment('history');
