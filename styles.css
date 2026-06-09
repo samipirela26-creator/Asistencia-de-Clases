@@ -576,7 +576,7 @@ textarea#student-name {
 /* ── Modal bottom sheet ─────────────────────────────────────── */
 .modal-overlay {
   display: none; position: fixed; inset: 0;
-  background: var(--c-overlay); z-index: 100;
+  background: var(--c-overlay); z-index: 900;
   flex-direction: column; justify-content: flex-end;
   max-width: 480px; margin: 0 auto;
 }
@@ -625,7 +625,7 @@ textarea#student-name {
   background: var(--c-header-dark); color: #fff;
   padding: 12px 22px; border-radius: 24px;
   font-size: 13px; font-weight: 600;
-  z-index: 200;
+  z-index: 1000;
   box-shadow: 0 8px 24px rgba(0,0,0,.18);
   opacity: 0; transition: opacity .25s, transform .25s;
   pointer-events: none; white-space: nowrap;
@@ -718,7 +718,7 @@ textarea#student-name {
 /* ── Confirm dialog ─────────────────────────────────────────── */
 .confirm-overlay {
   display: none; position: fixed; inset: 0;
-  background: var(--c-overlay); z-index: 150;
+  background: var(--c-overlay); z-index: 950;
   align-items: center; justify-content: center;
   padding: 24px; max-width: 480px; margin: 0 auto;
 }
