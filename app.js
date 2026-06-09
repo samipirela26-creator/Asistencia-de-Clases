@@ -3102,20 +3102,30 @@ async function forceAppUpdate() {
   showToast('Buscando actualización…');
   try {
     const reg = await navigator.serviceWorker.getRegistration();
-    if (reg) {
-      await reg.update();
+    if (!reg) { window.location.reload(); return; }
+
+    await reg.update(); // re-descarga service-worker.js del servidor
+
+    const newSW = reg.waiting || reg.installing;
+    if (newSW) {
+      // Hay versión nueva: activarla. El listener 'controllerchange'
+      // (index.html) recarga solo cuando el SW nuevo toma control.
+      showToast('Instalando nueva versión…');
       if (reg.waiting) {
         reg.waiting.postMessage({ type: 'SKIP_WAITING' });
-      } else if (reg.installing) {
-        reg.installing.addEventListener('statechange', e => {
-          if (e.target.state === 'installed') {
-            e.target.postMessage({ type: 'SKIP_WAITING' });
-          }
+      } else {
+        newSW.addEventListener('statechange', e => {
+          if (e.target.state === 'installed') e.target.postMessage({ type: 'SKIP_WAITING' });
         });
       }
+      // Respaldo por si controllerchange no dispara (p.ej. iOS antiguo)
+      setTimeout(() => window.location.reload(), 4000);
+    } else {
+      // Sin SW nuevo: recargar igual — los archivos propios son Network First,
+      // así que la recarga trae la última versión de app.js/styles.css.
+      showToast('Ya tienes la última versión ✓');
+      setTimeout(() => window.location.reload(), 700);
     }
-    // Recargar tras breve pausa para que el nuevo SW tome control
-    setTimeout(() => window.location.reload(), 800);
   } catch (e) {
     showToast('Error al actualizar: ' + e.message);
   }
