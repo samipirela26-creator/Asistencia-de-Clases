@@ -390,6 +390,11 @@ input, textarea, button, select { font-family: inherit; }
   border-left: 4px solid var(--c-red);
   padding-left: 10px;
 }
+.attendance-student-row.late {
+  background: #FFFBEB;
+  border-left: 4px solid #D97706;
+  padding-left: 10px;
+}
 
 /* ── Badge ──────────────────────────────────────────────────── */
 .aa-badge {
@@ -400,6 +405,7 @@ input, textarea, button, select { font-family: inherit; }
 }
 .aa-badge.present { background: var(--c-green-bg); color: var(--c-green); }
 .aa-badge.absent  { background: var(--c-red-bg);   color: var(--c-red); }
+.aa-badge.late    { background: #FEF3C7;            color: #B45309; }
 .aa-badge.none    { background: #F3F4F6;            color: #6B7280; }
 .aa-badge.alert   { background: #FEF3C7;            color: var(--c-yellow); }
 .aa-badge.primary { background: var(--c-blue-bg);   color: var(--c-primary); }
@@ -1882,6 +1888,11 @@ textarea#student-name {
   background: #D1FAE5; color: #059669;
   box-shadow: 0 4px 16px rgba(5,150,105,.25);
 }
+.sw-btn-late {
+  width: 52px; height: 52px; font-size: 22px;
+  background: #FEF3C7; color: #B45309;
+  box-shadow: 0 4px 14px rgba(180,83,9,.22);
+}
 .sw-btn-undo {
   width: 46px; height: 46px; font-size: 18px;
   background: var(--c-surface); color: var(--c-text-2);
@@ -1919,6 +1930,8 @@ textarea#student-name {
 }
 .sw-stat-pill.present { border-color: var(--c-green); }
 .sw-stat-pill.absent  { border-color: var(--c-red); }
+.sw-stat-pill.late    { border-color: #D97706; }
+.sw-stat-pill.late .sw-stat-num { color: #B45309; }
 .sw-stat-num {
   font-size: 28px; font-weight: 900;
   line-height: 1;

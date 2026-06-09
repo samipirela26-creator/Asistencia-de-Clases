@@ -15,6 +15,7 @@ const state = {
   students:         [],
   sessions:         [],
   absentIds:        new Set(),
+  lateIds:          new Set(),
   importBuffer:     [],
   unsubClassrooms:  null,
 };
@@ -205,6 +206,7 @@ function navigateTo(viewName, data = null) {
 
     case 'take-attendance': {
       state.absentIds = new Set();
+      state.lateIds   = new Set();
       document.getElementById('attendance-date').value  = todayISO();
       document.getElementById('attendance-topic').value = '';
       document.getElementById('attendance-notes').value = '';
@@ -939,32 +941,50 @@ function renderAttendanceStudents() {
   }).join('');
 }
 
+// Tocar la fila rota el estado: Presente → Tarde → Ausente → Presente.
 function toggleAbsent(studentId) {
   const item   = document.getElementById(`att-item-${studentId}`);
   const status = document.getElementById(`att-status-${studentId}`);
   const avatar = document.getElementById(`att-avatar-${studentId}`);
+  const idx    = state.students.findIndex(s => s.id === studentId);
+  const baseColor = AVATAR_COLORS[idx % AVATAR_COLORS.length];
 
-  if (state.absentIds.has(studentId)) {
+  if (!state.lateIds) state.lateIds = new Set();
+  const isAbsent = state.absentIds.has(studentId);
+  const isLate   = state.lateIds.has(studentId);
+
+  if (!isAbsent && !isLate) {
+    // Presente → Tarde
+    state.lateIds.add(studentId);
+    item?.classList.remove('absent'); item?.classList.add('late');
+    if (status) { status.className = 'aa-badge late'; status.textContent = '🕐 Tarde'; }
+    if (avatar) { avatar.style.background = '#FDE68A'; avatar.style.color = '#92400E'; }
+  } else if (isLate) {
+    // Tarde → Ausente
+    state.lateIds.delete(studentId);
+    state.absentIds.add(studentId);
+    item?.classList.remove('late'); item?.classList.add('absent');
+    if (status) { status.className = 'aa-badge absent'; status.textContent = '✗ Ausente'; }
+    if (avatar) { avatar.style.background = '#FCA5A5'; avatar.style.color = '#7f1d1d'; }
+  } else {
+    // Ausente → Presente
     state.absentIds.delete(studentId);
     item?.classList.remove('absent');
     if (status) { status.className = 'aa-badge present'; status.textContent = '✓ Presente'; }
-    const idx = state.students.findIndex(s => s.id === studentId);
-    if (avatar) avatar.style.background = AVATAR_COLORS[idx % AVATAR_COLORS.length];
-  } else {
-    state.absentIds.add(studentId);
-    item?.classList.add('absent');
-    if (status) { status.className = 'aa-badge absent'; status.textContent = '✗ Ausente'; }
-    if (avatar) { avatar.style.background = '#FCA5A5'; avatar.style.color = '#7f1d1d'; }
+    if (avatar) { avatar.style.background = baseColor; avatar.style.color = ''; }
   }
   updateAbsentCount();
 }
 
 function updateAbsentCount() {
   const n  = state.absentIds.size;
+  const l  = state.lateIds ? state.lateIds.size : 0;
   const el = document.getElementById('absent-count');
   if (!el) return;
-  el.textContent = `${n} ausente${n !== 1 ? 's' : ''}`;
-  el.className   = n > 0 ? 'aa-badge absent' : 'aa-badge primary';
+  let txt = `${n} ausente${n !== 1 ? 's' : ''}`;
+  if (l > 0) txt += ` · ${l} tarde`;
+  el.textContent = txt;
+  el.className   = (n > 0 || l > 0) ? 'aa-badge absent' : 'aa-badge primary';
 }
 
 async function saveAttendance() {
@@ -982,6 +1002,7 @@ async function saveAttendance() {
     topic,
     notes,
     absentStudents: Array.from(state.absentIds),
+    lateStudents:   Array.from(state.lateIds || []),
     totalStudents:  state.students.length,
     createdAt:      firebase.firestore.FieldValue.serverTimestamp(),
   };
@@ -3054,7 +3075,7 @@ function swipeDecide(direction) {
 
   // Animar salida
   const card = document.getElementById('sw-card-active');
-  if (card) {
+  if (card && (direction === 'absent' || direction === 'present')) {
     // Asegurar que el overlay final sea visible brevemente
     swipeSetOverlay(direction === 'absent' ? -120 : 120);
     card.classList.add(direction === 'absent' ? 'fly-left' : 'fly-right');
@@ -3063,6 +3084,8 @@ function swipeDecide(direction) {
       swipeRenderCard();
     }, { once: true });
   } else {
+    // 'late' (u otros) → avanzar directo, sin deslizar
+    if (direction === 'late') showToast('🕐 Marcado tarde');
     swipe.index++;
     swipeRenderCard();
   }
@@ -3086,9 +3109,11 @@ function swipeShowSummary() {
   const total   = swipe.students.length;
   const absentIds = Object.entries(swipe.decisions)
     .filter(([, d]) => d === 'absent').map(([id]) => id);
-  const presentCount = total - absentIds.length;
+  const lateIds = Object.entries(swipe.decisions)
+    .filter(([, d]) => d === 'late').map(([id]) => id);
+  const presentCount = total - absentIds.length - lateIds.length;
 
-  // Stats
+  // Stats — los que llegaron tarde cuentan como presentes pero se muestran aparte
   const statsEl = document.getElementById('sw-summary-stats');
   if (statsEl) {
     statsEl.innerHTML = `
@@ -3096,6 +3121,11 @@ function swipeShowSummary() {
         <div class="sw-stat-num">${presentCount}</div>
         <div class="sw-stat-lab">Presentes</div>
       </div>
+      ${lateIds.length ? `
+      <div class="sw-stat-pill late">
+        <div class="sw-stat-num">${lateIds.length}</div>
+        <div class="sw-stat-lab">Tarde</div>
+      </div>` : ''}
       <div class="sw-stat-pill absent">
         <div class="sw-stat-num">${absentIds.length}</div>
         <div class="sw-stat-lab">Ausentes</div>
@@ -3146,15 +3176,18 @@ async function saveSwipeAttendance() {
   if (!dateVal) { showToast('Selecciona la fecha'); return; }
   if (!topic)   { showToast('Escribe el tema de la clase'); return; }
 
-  // Construir lista de ausentes a partir de las decisiones
+  // Construir listas a partir de las decisiones
   const absentStudents = Object.entries(swipe.decisions)
     .filter(([, d]) => d === 'absent').map(([id]) => id);
+  const lateStudents = Object.entries(swipe.decisions)
+    .filter(([, d]) => d === 'late').map(([id]) => id);
 
   const sessionData = {
     date:           firebase.firestore.Timestamp.fromDate(new Date(dateVal + 'T12:00:00')),
     topic,
     notes,
     absentStudents,
+    lateStudents,
     totalStudents:  swipe.students.length,
     createdAt:      firebase.firestore.FieldValue.serverTimestamp(),
   };
