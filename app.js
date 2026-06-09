@@ -1152,8 +1152,8 @@ async function saveAttendance() {
   const topic   = document.getElementById('attendance-topic').value.trim();
   const notes   = document.getElementById('attendance-notes').value.trim();
 
-  if (!dateVal) { showToast('Selecciona la fecha'); return; }
-  if (!topic)   { showToast('Escribe el tema de la clase'); return; }
+  if (!dateVal) { markFieldInvalid('attendance-date', '⚠️ Selecciona la fecha'); return; }
+  if (!topic)   { markFieldInvalid('attendance-topic', '⚠️ Falta el tema de la clase'); return; }
 
   // Aviso si ya existe una clase ese día en este salón (evita duplicados)
   if (checkDuplicateSession(dateVal, () => saveAttendance())) return;
@@ -1611,6 +1611,19 @@ function showToast(msg) {
   el.classList.add('show');
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => el.classList.remove('show'), 3200);
+}
+
+// Marca un campo obligatorio en rojo, lo enfoca y muestra el motivo
+function markFieldInvalid(fieldId, msg) {
+  const el = document.getElementById(fieldId);
+  if (el) {
+    el.style.outline = '2px solid #EF4444';
+    el.style.outlineOffset = '1px';
+    el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    try { el.focus({ preventScroll: true }); } catch {}
+    setTimeout(() => { el.style.outline = ''; el.style.outlineOffset = ''; }, 3000);
+  }
+  showToast(msg);
 }
 
 // ════════════════════════════════════
@@ -3397,8 +3410,8 @@ async function saveSwipeAttendance() {
   const topic   = document.getElementById('sw-topic')?.value.trim();
   const notes   = document.getElementById('sw-notes')?.value.trim();
 
-  if (!dateVal) { showToast('Selecciona la fecha'); return; }
-  if (!topic)   { showToast('Escribe el tema de la clase'); return; }
+  if (!dateVal) { markFieldInvalid('sw-date', '⚠️ Selecciona la fecha'); return; }
+  if (!topic)   { markFieldInvalid('sw-topic', '⚠️ Falta el tema de la clase'); return; }
 
   // Aviso si ya existe una clase ese día en este salón (evita duplicados)
   if (checkDuplicateSession(dateVal, () => saveSwipeAttendance())) return;
