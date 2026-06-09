@@ -1012,6 +1012,19 @@
           <span class="menu-row-val" id="menu-sw-version">v7</span>
         </div>
 
+        <div class="menu-section-title" style="margin-top:20px;">Respaldo</div>
+        <div class="menu-row" onclick="exportBackup()" style="color:var(--c-primary);">
+          <span class="menu-row-icon">💾</span>
+          <span class="menu-row-label">Descargar respaldo</span>
+          <span class="menu-row-val">.json</span>
+        </div>
+        <div class="menu-row" onclick="document.getElementById('backup-file-input').click()" style="color:var(--c-primary);">
+          <span class="menu-row-icon">📥</span>
+          <span class="menu-row-label">Restaurar respaldo</span>
+          <span class="menu-row-val">.json</span>
+        </div>
+        <input type="file" id="backup-file-input" accept="application/json,.json" style="display:none" onchange="importBackup(this)">
+
         <div class="menu-section-title" style="margin-top:20px;">Cuenta</div>
         <div class="menu-row" onclick="confirmSignOut()" style="color:#DC2626;">
           <span class="menu-row-icon">🚪</span>

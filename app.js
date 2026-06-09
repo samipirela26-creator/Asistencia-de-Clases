@@ -1384,6 +1384,128 @@ function copyInasistencias() {
 }
 
 // ════════════════════════════════════
+// RESPALDO — exportar / restaurar todos los datos
+// ════════════════════════════════════
+
+// Descarga un archivo .json con todos los salones, estudiantes y sesiones.
+// Queda guardado en el dispositivo del usuario (Descargas).
+async function exportBackup() {
+  try {
+    showToast('Generando respaldo…');
+    const uid = auth?.currentUser?.uid || null;
+    let query = db.collection('classrooms');
+    if (uid) query = query.where('ownerId', '==', uid);
+    const snap = await query.get();
+
+    const classrooms = [];
+    for (const doc of snap.docs) {
+      const ref = db.collection('classrooms').doc(doc.id);
+      const [studSnap, sessSnap] = await Promise.all([
+        ref.collection('students').get(),
+        ref.collection('sessions').get(),
+      ]);
+      classrooms.push({
+        id:       doc.id,
+        data:     doc.data(),
+        students: studSnap.docs.map(d => ({ id: d.id, data: d.data() })),
+        sessions: sessSnap.docs.map(d => ({ id: d.id, data: d.data() })),
+      });
+    }
+
+    const backup = {
+      app:        'AsistApp',
+      version:    1,
+      exportedAt: new Date().toISOString(),
+      ownerId:    uid,
+      classrooms,
+    };
+
+    const stamp = new Date().toISOString().slice(0, 10);
+    const blob  = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+    const url   = URL.createObjectURL(blob);
+    const a     = document.createElement('a');
+    a.href = url;
+    a.download = `asistapp-respaldo-${stamp}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+    const total = classrooms.reduce((n, c) => n + c.students.length, 0);
+    showToast(`Respaldo listo: ${classrooms.length} salones, ${total} estudiantes ✓`);
+  } catch (e) {
+    console.error('[Respaldo] Error al exportar:', e);
+    showToast('No se pudo generar el respaldo');
+  }
+}
+
+// Lee un archivo .json y restaura los datos en Firestore.
+// Crea salones nuevos (no sobrescribe los existentes) para evitar pérdidas.
+function importBackup(input) {
+  const file = input.files && input.files[0];
+  input.value = ''; // permitir volver a elegir el mismo archivo
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = async () => {
+    let backup;
+    try {
+      backup = JSON.parse(reader.result);
+    } catch {
+      showToast('Archivo inválido (no es JSON)');
+      return;
+    }
+    if (!backup || backup.app !== 'AsistApp' || !Array.isArray(backup.classrooms)) {
+      showToast('Este archivo no es un respaldo de AsistApp');
+      return;
+    }
+
+    const totalSal = backup.classrooms.length;
+    const totalEst = backup.classrooms.reduce((n, c) => n + (c.students?.length || 0), 0);
+    const ok = confirm(
+      `Restaurar respaldo del ${(backup.exportedAt || '').slice(0, 10)}?\n\n` +
+      `Se agregarán ${totalSal} salones y ${totalEst} estudiantes como copias nuevas.\n` +
+      `Tus datos actuales NO se borran.`
+    );
+    if (!ok) return;
+
+    try {
+      showToast('Restaurando…');
+      const uid = auth?.currentUser?.uid || null;
+
+      let restored = 0;
+      for (const c of backup.classrooms) {
+        const cData = { ...(c.data || {}) };
+        if (uid) cData.ownerId = uid;
+        const newRef = await db.collection('classrooms').add(cData);
+
+        // Estudiantes y sesiones en lotes
+        const writeAll = async (items, subName) => {
+          for (let i = 0; i < (items?.length || 0); i += 400) {
+            const batch = db.batch();
+            items.slice(i, i + 400).forEach(it => {
+              batch.set(newRef.collection(subName).doc(), it.data || {});
+            });
+            await batch.commit();
+          }
+        };
+        await writeAll(c.students, 'students');
+        await writeAll(c.sessions, 'sessions');
+        restored++;
+      }
+
+      showToast(`Restaurados ${restored} salones ✓`);
+      navigateTo('classrooms');
+    } catch (e) {
+      console.error('[Respaldo] Error al restaurar:', e);
+      showToast('No se pudo restaurar el respaldo');
+    }
+  };
+  reader.onerror = () => showToast('No se pudo leer el archivo');
+  reader.readAsText(file);
+}
+
+// ════════════════════════════════════
 // HELPERS
 // ════════════════════════════════════
 function initials(name) {
