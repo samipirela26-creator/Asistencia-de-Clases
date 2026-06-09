@@ -2905,11 +2905,18 @@ function swipeShowSummary() {
       if (absentWrap) absentWrap.style.display = 'none';
     } else {
       if (absentWrap) absentWrap.style.display = '';
+      // Mapa id → número de lista (orden alfabético, igual que el diario)
+      const numById = {};
+      [...state.students]
+        .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'es', { sensitivity: 'base' }))
+        .forEach((st, idx) => { numById[st.id] = idx + 1; });
       absentListEl.innerHTML = absentIds.map(sid => {
         const st = swipe.students.find(s => s.id === sid);
         if (!st) return '';
+        const n = numById[sid];
+        const numTag = n ? `<b>${n}.</b> ` : '';
         return `<span class="sw-absent-chip" onclick="swipeToggleAbsent('${sid}')" title="Toca para marcar como presente">
-          ✕ ${esc(st.name)}
+          ✕ ${numTag}${esc(st.name)}
         </span>`;
       }).join('');
     }
