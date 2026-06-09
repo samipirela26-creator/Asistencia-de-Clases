@@ -626,14 +626,18 @@ async function loadCardCounts() {
 
   for (const c of state.classrooms) {
     try {
-      const [studSnap, sessSnap] = await Promise.all([
-        db.collection('classrooms').doc(c.id).collection('students').get(),
-        db.collection('classrooms').doc(c.id).collection('sessions')
-          .orderBy('date', 'desc').limit(1).get(),
-      ]);
+      // Conteo: usar studentCount desnormalizado (0 lecturas).
+      // Fallback para salones viejos que aún no lo tienen guardado.
+      let n = c.studentCount;
+      if (typeof n !== 'number') {
+        const studSnap = await db.collection('classrooms').doc(c.id).collection('students').get();
+        n = studSnap.size;
+        syncStudentCount(c.id, n);
+      }
 
-      // Conteo alumnos
-      const n   = studSnap.size;
+      const sessSnap = await db.collection('classrooms').doc(c.id).collection('sessions')
+        .orderBy('date', 'desc').limit(1).get();
+
       const txt = `${n} alumno${n !== 1 ? 's' : ''}`;
       const el1 = document.getElementById(`card-count-${c.id}`);
       const el2 = document.getElementById(`list-count-${c.id}`);
@@ -700,7 +704,20 @@ async function loadStudents(classroomId) {
     if (state.currentClassroom && state.currentClassroom.id !== classroomId) return;
     state.students = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     renderStudentsList();
+    syncStudentCount(classroomId, state.students.length);
   } catch (e) { console.error('Error estudiantes:', e); }
+}
+
+// Mantiene studentCount desnormalizado en el doc del salón.
+// Solo escribe si cambió (migra salones viejos automáticamente).
+function syncStudentCount(classroomId, count) {
+  const c = state.classrooms.find(x => x.id === classroomId);
+  if (c && c.studentCount === count) return;
+  if (c) c.studentCount = count;
+  if (state.currentClassroom?.id === classroomId) state.currentClassroom.studentCount = count;
+  db.collection('classrooms').doc(classroomId)
+    .update({ studentCount: count })
+    .catch(() => {}); // sin permisos u offline: se reintenta en la próxima carga
 }
 
 function renderStudentsList() {
@@ -1256,9 +1273,15 @@ function renderSessionDetail(session) {
   const lateStudents    = state.students.filter(s => lateIds.includes(s.id));
   const presentStudents = state.students.filter(s => !absentIds.includes(s.id) && !lateIds.includes(s.id));
 
-  renderDetailPersonList('detail-absent-list',  absentStudents,  'absent');
-  renderDetailPersonList('detail-late-list',    lateStudents,    'late');
-  renderDetailPersonList('detail-present-list', presentStudents, 'present');
+  // Número de lista: posición en la lista completa ordenada alfabéticamente (una sola vez)
+  const numById = {};
+  [...state.students]
+    .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'es', { sensitivity: 'base' }))
+    .forEach((s, idx) => { numById[s.id] = idx + 1; });
+
+  renderDetailPersonList('detail-absent-list',  absentStudents,  'absent',  numById);
+  renderDetailPersonList('detail-late-list',    lateStudents,    'late',    numById);
+  renderDetailPersonList('detail-present-list', presentStudents, 'present', numById);
 
   // Ocultar secciones vacías
   document.getElementById('detail-absent-section')
@@ -1267,7 +1290,7 @@ function renderSessionDetail(session) {
     ?.classList.toggle('hidden', lateStudents.length === 0);
 }
 
-function renderDetailPersonList(containerId, students, kind) {
+function renderDetailPersonList(containerId, students, kind, numById = {}) {
   const el = document.getElementById(containerId);
   if (!el) return;
 
@@ -1277,12 +1300,6 @@ function renderDetailPersonList(containerId, students, kind) {
     </div>`;
     return;
   }
-
-  // Número de lista: posición en la lista completa ordenada alfabéticamente
-  const sorted = [...state.students].sort((a, b) =>
-    (a.name || '').localeCompare(b.name || '', 'es', { sensitivity: 'base' }));
-  const numById = {};
-  sorted.forEach((s, idx) => { numById[s.id] = idx + 1; });
 
   el.innerHTML = students.map((s, i) => {
     const bg    = AVATAR_COLORS[i % AVATAR_COLORS.length];
@@ -3325,10 +3342,15 @@ function swipeBindDrag(card) {
   c.addEventListener('touchend', onEnd);
 
   // Mouse (pruebas en desktop)
+  // Los listeners de window se registran UNA sola vez y delegan en los
+  // handlers de la tarjeta activa (antes se acumulaban en cada tarjeta).
   c.addEventListener('mousedown', e => { onStart(e.clientX, e.clientY); });
-  window.addEventListener('mousemove', e => { if (isDragging) onMove(e.clientX); });
-  window.addEventListener('mouseup', () => { if (isDragging) onEnd(); });
+  _swipeDrag = { onMove: x => { if (isDragging) onMove(x); }, onEnd: () => { if (isDragging) onEnd(); } };
 }
+
+let _swipeDrag = null;
+window.addEventListener('mousemove', e => _swipeDrag?.onMove(e.clientX));
+window.addEventListener('mouseup',   () => _swipeDrag?.onEnd());
 
 // ── Decidir: 'present' | 'absent' ───────────────────────
 function swipeDecide(direction) {
