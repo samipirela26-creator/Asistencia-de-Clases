@@ -2705,7 +2705,7 @@ function loadProfileView() {
   const name = user.displayName || '';
   const nameInp  = document.getElementById('profile-name-input');
   const emailInp = document.getElementById('profile-email-input');
-  const avatarLg = document.getElementById('profile-avatar-lg');
+  const avatarLg = document.getElementById('profile-avatar-lg-doc');
   const nameDisp = document.getElementById('profile-name-display');
   const emailDisp = document.getElementById('profile-email-display');
   if (nameInp)   nameInp.value    = name;
