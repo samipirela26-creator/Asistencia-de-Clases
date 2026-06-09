@@ -426,6 +426,17 @@ input, textarea, button, select { font-family: inherit; }
 
 /* ── Inputs ─────────────────────────────────────────────────── */
 .aa-field { display: flex; flex-direction: column; gap: 6px; }
+.color-picker { display: flex; flex-wrap: wrap; gap: 10px; padding-top: 2px; }
+.color-swatch {
+  width: 30px; height: 30px; border-radius: 50%;
+  border: 2px solid transparent; cursor: pointer; padding: 0;
+  transition: transform .12s, box-shadow .12s;
+}
+.color-swatch:active { transform: scale(0.9); }
+.color-swatch.selected {
+  border-color: var(--c-text-1);
+  box-shadow: 0 0 0 2px var(--c-surface), 0 0 0 4px var(--c-text-1);
+}
 .aa-field label, .field-label {
   font-size: 11px; font-weight: 600;
   letter-spacing: 0.5px; text-transform: uppercase;

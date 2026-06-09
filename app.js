@@ -33,6 +33,20 @@ const CARD_COLORS = [
 
 const AVATAR_COLORS = ['#4361EE','#059669','#7C3AED','#DC2626','#D97706','#0891B2','#BE185D','#374151'];
 
+// Color estable por salón según su posición en la lista, para que los
+// salones contiguos siempre se vean con colores distintos (no por hash).
+// Mismo color en la pantalla de inicio y en la lista de salones.
+function colorForClassroom(c) {
+  // Si el docente eligió un color, se respeta.
+  if (Number.isInteger(c.colorIdx) && c.colorIdx >= 0 && c.colorIdx < CARD_COLORS.length) {
+    return CARD_COLORS[c.colorIdx];
+  }
+  // Si no, color automático por posición en la lista.
+  const i = state.classrooms.findIndex(x => x.id === c.id);
+  const idx = i >= 0 ? i : Math.abs(hashStr(c.id));
+  return CARD_COLORS[idx % CARD_COLORS.length];
+}
+
 let db   = null;
 let auth = null;
 let currentUser = null; // usuario autenticado
@@ -491,7 +505,7 @@ function renderHomeClassrooms() {
 }
 
 function classroomGridCardHTML(c) {
-  const color = CARD_COLORS[Math.abs(hashStr(c.id)) % CARD_COLORS.length];
+  const color = colorForClassroom(c);
   const sub   = [c.subject, c.grade].filter(Boolean).join(' · ') || 'Sin materia';
 
   return `
@@ -523,7 +537,7 @@ function renderClassroomsList() {
 }
 
 function classroomListItemHTML(c) {
-  const color = CARD_COLORS[Math.abs(hashStr(c.id)) % CARD_COLORS.length];
+  const color = colorForClassroom(c);
   const sub   = [c.subject, c.grade].filter(Boolean).join(' · ') || 'Sin materia';
 
   return `
@@ -1057,6 +1071,26 @@ function renderDetailPersonList(containerId, students, kind) {
 // SALONES CRUD
 // ════════════════════════════════════
 let editingClassroomId = null;
+let selectedColorIdx   = 0; // color elegido en el formulario
+
+// Dibuja las muestras de color y marca la seleccionada.
+function renderColorPicker(selected) {
+  selectedColorIdx = selected;
+  const box = document.getElementById('classroom-color-picker');
+  if (!box) return;
+  box.innerHTML = CARD_COLORS.map((col, i) => `
+    <button type="button"
+            class="color-swatch${i === selectedColorIdx ? ' selected' : ''}"
+            style="background:${col.stripe}"
+            onclick="pickClassroomColor(${i})"
+            title="Color ${i + 1}"></button>`).join('');
+}
+
+function pickClassroomColor(i) {
+  selectedColorIdx = i;
+  document.querySelectorAll('#classroom-color-picker .color-swatch')
+    .forEach((el, idx) => el.classList.toggle('selected', idx === i));
+}
 
 function openAddClassroom() {
   editingClassroomId = null;
@@ -1064,6 +1098,8 @@ function openAddClassroom() {
   document.getElementById('classroom-name').value    = '';
   document.getElementById('classroom-subject').value = '';
   document.getElementById('classroom-grade').value   = '';
+  // Color automático por defecto: el siguiente según cuántos salones hay.
+  renderColorPicker(state.classrooms.length % CARD_COLORS.length);
   openModal('modal-classroom');
   setTimeout(() => document.getElementById('classroom-name').focus(), 320);
 }
@@ -1076,6 +1112,9 @@ function openEditClassroom() {
   document.getElementById('classroom-name').value    = c.name    || '';
   document.getElementById('classroom-subject').value = c.subject || '';
   document.getElementById('classroom-grade').value   = c.grade   || '';
+  const idx = Number.isInteger(c.colorIdx) ? c.colorIdx
+            : (state.classrooms.findIndex(x => x.id === c.id) % CARD_COLORS.length);
+  renderColorPicker(idx >= 0 ? idx : 0);
   openModal('modal-classroom');
 }
 
@@ -1087,6 +1126,7 @@ async function saveClassroom() {
     name,
     subject: document.getElementById('classroom-subject').value.trim(),
     grade:   document.getElementById('classroom-grade').value.trim(),
+    colorIdx: selectedColorIdx,
   };
 
   try {
