@@ -93,6 +93,7 @@ function startApp() {
   subscribeClassrooms();
   navigateTo('home');
   setTimeout(() => loadAllAlerts().catch(() => {}), 3000);
+  setTimeout(() => checkBackupReminder(), 5000);
 }
 
 function stopApp() {
@@ -1431,11 +1432,36 @@ async function exportBackup() {
     document.body.removeChild(a);
     setTimeout(() => URL.revokeObjectURL(url), 1000);
 
+    try { localStorage.setItem('asistapp_last_backup', Date.now().toString()); } catch {}
+
     const total = classrooms.reduce((n, c) => n + c.students.length, 0);
     showToast(`Respaldo listo: ${classrooms.length} salones, ${total} estudiantes ✓`);
   } catch (e) {
     console.error('[Respaldo] Error al exportar:', e);
     showToast('No se pudo generar el respaldo');
+  }
+}
+
+// Recordatorio: si pasaron 7+ días desde el último respaldo (o nunca), avisa.
+const BACKUP_REMINDER_DAYS = 7;
+function checkBackupReminder() {
+  // No molestar si no hay salones que respaldar todavía
+  if (!state.classrooms || state.classrooms.length === 0) return;
+
+  let last = 0;
+  try { last = parseInt(localStorage.getItem('asistapp_last_backup') || '0', 10) || 0; } catch {}
+
+  const dias = last ? (Date.now() - last) / 86400000 : Infinity;
+  if (dias < BACKUP_REMINDER_DAYS) return;
+
+  const msg = last
+    ? `Hace ${Math.floor(dias)} días que no descargas un respaldo.\n\n¿Descargar uno ahora?`
+    : `Aún no has descargado ningún respaldo de tus datos.\n\n¿Descargar uno ahora para tenerlo seguro?`;
+  if (confirm(msg)) {
+    exportBackup();
+  } else {
+    // Posponer 1 día para no insistir cada vez que abre la app
+    try { localStorage.setItem('asistapp_last_backup', (Date.now() - (BACKUP_REMINDER_DAYS - 1) * 86400000).toString()); } catch {}
   }
 }
 
