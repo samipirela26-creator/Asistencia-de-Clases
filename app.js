@@ -182,7 +182,8 @@ function navigateTo(viewName, data = null) {
         _skipAttendanceGuard = true;
         navigateTo(viewName, data);
         _skipAttendanceGuard = false;
-      }
+      },
+      'Salir'
     );
     return;
   }
@@ -1017,7 +1018,8 @@ function checkDuplicateSession(dateISO, retry) {
       closeModal('modal-confirm');
       _dupOverride = true;
       retry();
-    }
+    },
+    'Guardar igual'
   );
   return true;
 }
@@ -1202,7 +1204,8 @@ async function saveAttendance() {
     await loadSessions(state.currentClassroom.id);
     switchSegment('history');
     // Mostrar números de lista de ausentes para el diario
-    showInasistenciasModal(sessionData.absentStudents);
+    // (ids puros: en edición absentStudents puede traer objetos con justificación)
+    showInasistenciasModal(Array.from(state.absentIds));
 
     // F6: Evaluar alertas en background (no bloqueante)
     evaluateAlerts(state.currentClassroom.id).then(alerts => {
@@ -1592,11 +1595,11 @@ document.querySelectorAll('.modal-overlay, .confirm-overlay').forEach(overlay =>
   });
 });
 
-function showConfirm(title, message, onConfirm) {
+function showConfirm(title, message, onConfirm, okLabel = 'Eliminar') {
   document.getElementById('confirm-title').textContent   = title;
   document.getElementById('confirm-message').textContent = message;
   const btn = document.getElementById('confirm-ok-btn');
-  if (btn) btn.onclick = onConfirm;
+  if (btn) { btn.onclick = onConfirm; btn.textContent = okLabel; }
   openModal('modal-confirm');
 }
 
