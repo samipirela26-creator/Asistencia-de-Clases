@@ -3,7 +3,7 @@
    Estrategia: Cache First para assets, Network First para datos
    ============================================================ */
 
-const CACHE_NAME    = 'asistapp-v26';
+const CACHE_NAME    = 'asistapp-v28';
 const OFFLINE_URL   = './offline.html';
 
 // Archivos que se precargan al instalar el SW

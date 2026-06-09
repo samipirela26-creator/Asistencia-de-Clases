@@ -59,7 +59,13 @@ async function initApp() {
     db   = firebase.firestore();
     auth = firebase.auth();
 
-    db.enablePersistence({ synchronizeTabs: true }).catch(err => {
+    // IMPORTANTE: esperar a que la persistencia offline quede activa ANTES
+    // de hacer cualquier consulta, para que los datos se guarden en el
+    // caché del dispositivo y estén disponibles sin internet.
+    try {
+      await db.enablePersistence({ synchronizeTabs: true });
+      console.log('[Offline] Persistencia activada ✓');
+    } catch (err) {
       if (err.code === 'failed-precondition') {
         console.warn('[Offline] Múltiples pestañas — persistencia desactivada en esta pestaña');
       } else if (err.code === 'unimplemented') {
@@ -67,7 +73,7 @@ async function initApp() {
       } else {
         console.error('[Offline] Error al activar persistencia:', err);
       }
-    });
+    }
   } catch (e) {
     console.warn('Firebase no disponible:', e.message);
     showToast('⚠️ Configura Firebase en firebase-config.js');
@@ -482,7 +488,10 @@ function subscribeClassrooms() {
     renderHomeClassrooms();
     loadCardCounts();
     buildGlobalIndex();
-  }, err => console.error('Error salones:', err));
+  }, err => {
+    console.error('Error salones:', err);
+    if (!navigator.onLine) showToast('Sin conexión — mostrando datos guardados');
+  });
 }
 
 // ════════════════════════════════════
@@ -599,6 +608,13 @@ function renderClassroomDetailHeader(classroom) {
   const subEl  = document.getElementById('detail-classroom-sub');
   if (nameEl) nameEl.textContent = classroom.name;
   if (subEl)  subEl.textContent  = [classroom.subject, classroom.grade].filter(Boolean).join(' · ') || '';
+
+  // Teñir la cabecera con el color elegido para el salón.
+  const header = document.getElementById('detail-dark-header');
+  if (header) {
+    const col = colorForClassroom(classroom);
+    header.style.background = `linear-gradient(160deg, ${col.stripe} 0%, rgba(0,0,0,0.55) 150%)`;
+  }
 }
 
 // ════════════════════════════════════
