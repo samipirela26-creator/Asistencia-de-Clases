@@ -536,8 +536,6 @@ function classroomListItemHTML(c) {
       </div>
       <div class="item-count" id="list-count-${c.id}"
            style="background:${color.bg};color:${color.text}">—</div>
-      <button class="item-delete" title="Eliminar salón"
-              onclick="deleteClassroomFromList('${c.id}', event)">🗑️</button>
       <span class="chevron">›</span>
     </div>`;
 }
@@ -1113,11 +1111,8 @@ async function saveClassroom() {
 // ════════════════════════════════════
 // Eliminar desde la lista de salones (botón 🗑️ en cada tarjeta).
 // `event` permite frenar la propagación para que no se abra el salón al borrar.
-function deleteClassroomFromList(classroomId, event) {
-  if (event) event.stopPropagation();
-  const c = state.classrooms.find(x => x.id === classroomId);
-  if (c) confirmDeleteClassroom(c);
-}
+// El renombrar y eliminar de cada sección viven dentro del salón:
+// botones ✏️ (openEditClassroom) y 🗑️ (confirmDeleteClassroom) en su cabecera.
 
 // Acepta un salón opcional; si no se pasa, usa el salón abierto (vista detalle).
 function confirmDeleteClassroom(classroom) {
