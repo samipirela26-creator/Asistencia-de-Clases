@@ -475,9 +475,9 @@ function updateHeroBanner() {
   // Busca si hay algún salón sin sesión hoy
   const today = todayISO();
   const pending = state.classrooms.find(c => {
-    const lastSession = state._lastSessions?.[c.id];
-    if (!lastSession) return true;
-    return isoFromTimestamp(lastSession.date) !== today;
+    const lastISO = state._lastSessions?.[c.id]?.dateISO;
+    if (!lastISO) return true;
+    return lastISO !== today;
   });
 
   if (pending) {
@@ -624,7 +624,8 @@ async function loadCardCounts() {
   if (!db) return;
   if (!state._lastSessions) state._lastSessions = {};
 
-  for (const c of state.classrooms) {
+  // Todos los salones en paralelo (antes era uno por uno)
+  await Promise.all(state.classrooms.map(async c => {
     try {
       // Conteo: usar studentCount desnormalizado (0 lecturas).
       // Fallback para salones viejos que aún no lo tienen guardado.
@@ -635,21 +636,25 @@ async function loadCardCounts() {
         syncStudentCount(c.id, n);
       }
 
-      const sessSnap = await db.collection('classrooms').doc(c.id).collection('sessions')
-        .orderBy('date', 'desc').limit(1).get();
-
       const txt = `${n} alumno${n !== 1 ? 's' : ''}`;
       const el1 = document.getElementById(`card-count-${c.id}`);
       const el2 = document.getElementById(`list-count-${c.id}`);
       if (el1) el1.textContent = txt;
       if (el2) el2.textContent = txt;
 
-      // Última sesión (para el hero banner)
-      if (!sessSnap.empty) {
-        state._lastSessions[c.id] = { id: sessSnap.docs[0].id, ...sessSnap.docs[0].data() };
+      // Última sesión (para el hero banner): usar fecha desnormalizada.
+      // Fallback con 1 lectura para salones que aún no la tienen.
+      let iso = c.lastSessionISO;
+      if (iso === undefined) {
+        const sessSnap = await db.collection('classrooms').doc(c.id).collection('sessions')
+          .orderBy('date', 'desc').limit(1).get();
+        iso = sessSnap.empty ? null : isoFromTimestamp(sessSnap.docs[0].data().date);
+        c.lastSessionISO = iso;
+        db.collection('classrooms').doc(c.id).update({ lastSessionISO: iso }).catch(() => {});
       }
+      state._lastSessions[c.id] = iso ? { dateISO: iso } : null;
     } catch { /* ignorar */ }
-  }
+  }));
   updateHeroBanner();
 }
 
@@ -968,7 +973,23 @@ async function loadSessions(classroomId) {
     if (state.currentClassroom && state.currentClassroom.id !== classroomId) return;
     state.sessions = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     renderSessionsList();
+    syncLastSessionISO(classroomId);
   } catch (e) { console.error('Error sesiones:', e); }
+}
+
+// Mantiene lastSessionISO desnormalizado en el doc del salón.
+// loadSessions corre tras guardar/editar/eliminar clases, así queda siempre al día.
+function syncLastSessionISO(classroomId) {
+  const newest = state.sessions[0]; // vienen ordenadas desc
+  const iso = newest ? isoFromTimestamp(newest.date) : null;
+  if (!state._lastSessions) state._lastSessions = {};
+  state._lastSessions[classroomId] = iso ? { dateISO: iso } : null;
+  const c = state.classrooms.find(x => x.id === classroomId);
+  if (c && c.lastSessionISO === iso) return;
+  if (c) c.lastSessionISO = iso;
+  db.collection('classrooms').doc(classroomId)
+    .update({ lastSessionISO: iso })
+    .catch(() => {});
 }
 
 function renderSessionsList() {

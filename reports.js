@@ -92,6 +92,18 @@ async function rAddQRtoPDF(doc, text, x, y, size = 22) {
 async function rFetchData(classroomId, allSessions = false) {
   if (!db) throw new Error('Firebase no configurado — edita firebase-config.js con tus credenciales');
   if (!classroomId) throw new Error('No hay salón seleccionado');
+
+  // Reusar los datos ya cargados del salón abierto (ahorra 50-200 lecturas
+  // por reporte). state.students viene ordenado por nombre y state.sessions
+  // desc por fecha — aquí se necesita asc, así que se reordena una copia.
+  if (state.currentClassroom?.id === classroomId
+      && state.students.length && state.sessions.length) {
+    return {
+      students: [...state.students],
+      sessions: [...state.sessions].sort((a, b) => tsToDate(a.date) - tsToDate(b.date)),
+    };
+  }
+
   let sessQ = db.collection('classrooms').doc(classroomId).collection('sessions').orderBy('date', 'asc');
   const [studSnap, sessSnap] = await Promise.all([
     db.collection('classrooms').doc(classroomId).collection('students').orderBy('name').get(),
