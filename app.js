@@ -3228,6 +3228,11 @@ function openSwipeAttendance() {
   // Fecha de hoy por defecto en los campos de metadata
   const swDate = document.getElementById('sw-date');
   if (swDate) swDate.value = todayISO();
+  // Limpiar tema y observaciones de la clase anterior (cada clase es nueva)
+  const swTopic = document.getElementById('sw-topic');
+  if (swTopic) swTopic.value = '';
+  const swNotes = document.getElementById('sw-notes');
+  if (swNotes) swNotes.value = '';
 
   navigateTo('swipe-attendance');
   swipeRenderCard();
