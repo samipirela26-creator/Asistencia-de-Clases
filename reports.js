@@ -1010,6 +1010,208 @@ async function generateBlankAttendancePDF() {
   } catch (e) { console.error(e); showToast('Error: ' + e.message); }
 }
 
+// ════════════════════════════════════════════════════════════
+// HOJA DE CONTROL DE INASISTENCIA (formato oficial)
+// Réplica del documento físico, llenado automático:
+//  · FECHA de cada clase     · punto (•) por alumno ausente
+//  · MATERIA VISTA = tema    · 13 clases por hoja (la 14 → hoja nueva)
+// ════════════════════════════════════════════════════════════
+function rVTextCentered(doc, text, x, y, w, h) {
+  // Texto vertical (de abajo hacia arriba) centrado en la caja (x,y,w,h)
+  const tw = doc.getTextWidth(text);
+  const cx = x + w / 2 + 1.3;       // centrado horizontal (alto de fuente ~)
+  const cy = y + h / 2 + tw / 2;    // centrado vertical
+  doc.text(text, cx, cy, { angle: 90 });
+}
+
+async function generateInasistenciaSheet() {
+  if (!state.currentClassroom) { showToast('Selecciona un salón'); return; }
+  showToast('Generando hoja de inasistencia…');
+  try {
+    const cls = state.currentClassroom;
+    const { students, sessions } = await rFetchData(cls.id); // sessions asc por fecha
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'letter' });
+
+    // ── Geometría (mm) ───────────────────────────────────────
+    const LIST_ROWS = 48, MARK_COLS = 13, MID_ROWS = 13, EVAL_ROWS = 15;
+    const ax = 10;                 // margen izquierdo
+    const numW = 7, markW = 3.4;
+    const aRight = ax + numW + MARK_COLS * markW;
+    const bx = aRight + 3;
+    const fechaW = 7, objW = 7, matW = 24;
+    const bRight = bx + fechaW + objW + matW;
+    const cx0 = bRight + 3;
+    const cRight = 205.9;          // margen derecho (215.9 - 10)
+    const cW = cRight - cx0;
+    const eN = 7, eEstr = 34, eFecha = 17, ePct = 9;
+    const eObs = cW - (eN + eEstr + eFecha + ePct);
+
+    const yTitle = 12, titleH = 5;
+    const yBand = yTitle + titleH;        // 17
+    const bandH = 24;
+    const yBody = yBand + bandH;          // 41
+    const yBottom = 266;
+    const rowH = (yBottom - yBody) / LIST_ROWS;
+    const midRowH = (yBottom - yBody) / MID_ROWS;
+
+    const BLACK = [0, 0, 0], GRAY = [217, 217, 217];
+
+    const fmtDate = ts => { const d = tsToDate(ts);
+      return ('0' + d.getDate()).slice(-2) + '/' + ('0' + (d.getMonth() + 1)).slice(-2); };
+
+    // Dividir las clases en hojas de 13
+    const pages = [];
+    for (let i = 0; i < Math.max(sessions.length, 1); i += MARK_COLS)
+      pages.push(sessions.slice(i, i + MARK_COLS));
+
+    pages.forEach((pageSessions, pIdx) => {
+      if (pIdx > 0) doc.addPage();
+      doc.setDrawColor(...BLACK); doc.setLineWidth(0.2);
+
+      const titleBar = (x, w, txt) => {
+        doc.setFillColor(...GRAY); doc.rect(x, yTitle, w, titleH, 'FD');
+        doc.setTextColor(...BLACK); doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5);
+        doc.text(txt, x + w / 2, yTitle + 3.6, { align: 'center' });
+      };
+
+      // ───────── BLOQUE A: CONTROL DE INASISTENCIA ─────────
+      titleBar(ax, aRight - ax, 'CONTROL DE INASITENCIA');
+      // marco
+      doc.rect(ax, yBand, aRight - ax, yBottom - yBand);
+      // líneas verticales
+      doc.line(ax + numW, yBand, ax + numW, yBottom);
+      for (let c = 1; c <= MARK_COLS; c++) {
+        const x = ax + numW + c * markW;
+        doc.line(x, yBand, x, yBottom);
+      }
+      // líneas horizontales (banda + filas)
+      doc.line(ax, yBody, aRight, yBody);
+      for (let r = 1; r <= LIST_ROWS; r++) {
+        const y = yBody + r * rowH;
+        doc.line(ax, y, aRight, y);
+      }
+      // etiqueta vertical "NÚMERO DE LISTA"
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(7);
+      rVTextCentered(doc, 'NÚMERO DE LISTA', ax, yBand, numW, bandH + rowH * 6);
+      // fechas por columna (banda superior)
+      doc.setFontSize(6.5);
+      pageSessions.forEach((s, c) => {
+        const x = ax + numW + c * markW;
+        rVTextCentered(doc, fmtDate(s.date), x, yBand, markW, bandH);
+      });
+      // números 1..48
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(6);
+      for (let r = 1; r <= LIST_ROWS; r++) {
+        doc.text(String(r), ax + numW / 2, yBody + (r - 0.5) * rowH + 1, { align: 'center' });
+      }
+      // puntos de inasistencia
+      doc.setFillColor(...BLACK);
+      students.forEach((st, sIdx) => {
+        if (sIdx >= LIST_ROWS) return;
+        pageSessions.forEach((s, c) => {
+          if (getAbsentIds(s).includes(st.id)) {
+            const cxDot = ax + numW + (c + 0.5) * markW;
+            const cyDot = yBody + (sIdx + 0.5) * rowH;
+            doc.circle(cxDot, cyDot, 0.8, 'F');
+          }
+        });
+      });
+
+      // ───────── BLOQUE B: FECHA / # OBJETIVO / MATERIA ─────────
+      doc.setDrawColor(...BLACK);
+      doc.rect(bx, yBand, bRight - bx, yBottom - yBand);
+      doc.line(bx + fechaW, yBand, bx + fechaW, yBottom);
+      doc.line(bx + fechaW + objW, yBand, bx + fechaW + objW, yBottom);
+      doc.line(bx, yBody, bRight, yBody);
+      for (let r = 1; r <= MID_ROWS; r++) {
+        const y = yBody + r * midRowH; doc.line(bx, y, bRight, y);
+      }
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(7);
+      rVTextCentered(doc, 'FECHA', bx, yBand, fechaW, bandH);
+      rVTextCentered(doc, '# DE OBJETIVO', bx + fechaW, yBand, objW, bandH);
+      rVTextCentered(doc, 'MATERIA VISTA', bx + fechaW + objW, yBand, matW, bandH);
+      // datos por clase
+      doc.setFont('helvetica', 'normal');
+      pageSessions.forEach((s, r) => {
+        const yMid = yBody + r * midRowH;
+        doc.setFontSize(7);
+        // Solo la FECHA se llena; # OBJETIVO y MATERIA VISTA quedan en blanco.
+        rVTextCentered(doc, fmtDate(s.date), bx, yMid, fechaW, midRowH);
+      });
+
+      // ───────── BLOQUE C: RESUMEN DEL PLAN EVALUATIVO ─────────
+      doc.setDrawColor(...BLACK);
+      titleBar(cx0, cW, 'RESUMEN DEL PLAN EVALUATIVO');
+      const evalBottom = yBody + EVAL_ROWS * 6;
+      const evalRowH = 6;
+      doc.rect(cx0, yBand, cW, evalBottom - yBand);
+      const exs = [cx0 + eN, cx0 + eN + eEstr, cx0 + eN + eEstr + eFecha, cx0 + eN + eEstr + eFecha + ePct];
+      exs.forEach(x => doc.line(x, yBand, x, evalBottom));
+      doc.line(cx0, yBody, cRight, yBody);
+      for (let r = 1; r <= EVAL_ROWS; r++) {
+        const y = yBody + r * evalRowH; doc.line(cx0, y, cRight, y);
+      }
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(7);
+      doc.text('Nº', cx0 + eN / 2, yBand + bandH / 2, { align: 'center' });
+      rVTextCentered(doc, 'ESTRATEGIA', cx0 + eN, yBand, eEstr, bandH);
+      rVTextCentered(doc, 'FECHA', cx0 + eN + eEstr, yBand, eFecha, bandH);
+      rVTextCentered(doc, '%', cx0 + eN + eEstr + eFecha, yBand, ePct, bandH);
+      rVTextCentered(doc, 'OBSERVACIÓN', cx0 + eN + eEstr + eFecha + ePct, yBand, eObs, bandH);
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(6.5);
+      for (let r = 1; r <= EVAL_ROWS; r++) {
+        doc.text(String(r), cx0 + eN / 2, yBody + (r - 0.5) * evalRowH + 1, { align: 'center' });
+      }
+
+      // ───────── RESUMEN DEL LAPSO ─────────
+      const lapsoY = evalBottom + 8, lapsoRowH = 5, lapsoValW = 26;
+      const labels = [
+        'TOTAL DE CLASES PROGRAMADAS', 'TOTAL DE CLASES DADAS', '% CLASES DADAS',
+        'TOTAL DE OBJETIVOS PROGRAMADOS', 'TOTAL DE OBJETIVOS DADOS', '%OBJETIVOS DADOS',
+        'TOTAL DE ALUMNOS', 'TOTAL DE ALUMNOS APROBADOS', '% DE ALUMNOS APROBADOS',
+        'TOTAL DE ALUMNOS  APLAZADOS', '% ALUMNOS APLAZADOS',
+      ];
+      titleBar2(doc, cx0, lapsoY, cW, 'RESUMEN DEL LAPSO', GRAY, BLACK);
+      const lapsoBodyY = lapsoY + lapsoRowH;
+      doc.rect(cx0, lapsoBodyY, cW, labels.length * lapsoRowH);
+      doc.line(cRight - lapsoValW, lapsoBodyY, cRight - lapsoValW, lapsoBodyY + labels.length * lapsoRowH);
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(6);
+      labels.forEach((l, i) => {
+        const y = lapsoBodyY + i * lapsoRowH;
+        if (i > 0) doc.line(cx0, y, cRight, y);
+        doc.text(l, cx0 + (cW - lapsoValW) / 2, y + lapsoRowH / 2 + 0.8, { align: 'center' });
+      });
+      // valores que sí conocemos
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(7);
+      const valX = cRight - lapsoValW / 2;
+      const putVal = (idx, val) => doc.text(String(val), valX, lapsoBodyY + idx * lapsoRowH + lapsoRowH / 2 + 0.8, { align: 'center' });
+      putVal(1, sessions.length);          // TOTAL DE CLASES DADAS
+
+      // ───────── DOCENTE ─────────
+      const docY = lapsoBodyY + labels.length * lapsoRowH + 10;
+      titleBar2(doc, cx0, docY, cW, 'DOCENTE', GRAY, BLACK);
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(...BLACK);
+      const fy = docY + 12;
+      [['NOMBRES:', 0], ['APELLIDOS:', 10], ['FIRMA:', 20]].forEach(([lab, dy]) => {
+        doc.text(lab, cx0, fy + dy);
+        doc.line(cx0 + 22, fy + dy, cRight, fy + dy);
+      });
+    });
+
+    doc.save(`Inasistencia_${rSafeFilename(cls.name)}_${rFileDate()}.pdf`);
+    showToast('Hoja de inasistencia descargada ✓');
+  } catch (e) { console.error(e); showToast('Error: ' + e.message); }
+}
+
+// barra de título reutilizable en una posición y arbitraria
+function titleBar2(doc, x, y, w, txt, fill, text) {
+  doc.setDrawColor(...text); doc.setLineWidth(0.2);
+  doc.setFillColor(...fill); doc.rect(x, y, w, 5, 'FD');
+  doc.setTextColor(...text); doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5);
+  doc.text(txt, x + w / 2, y + 3.6, { align: 'center' });
+}
+
 function loadReportsView() {
   const cls = state.currentClassroom;
   if (!cls) return;
