@@ -1037,8 +1037,8 @@ async function generateInasistenciaSheet() {
     // ── Geometría (mm) ───────────────────────────────────────
     const LIST_ROWS = 48, MARK_COLS = 13, MID_ROWS = 13, EVAL_ROWS = 15;
     const ax = 10;                 // margen izquierdo
-    const numW = 7, markW = 3.4;
-    const aRight = ax + numW + MARK_COLS * markW;
+    const titW = 5, numW = 6, markW = 3.4;   // titW: etiqueta vertical; numW: números 1-48
+    const aRight = ax + titW + numW + MARK_COLS * markW;
     const bx = aRight + 3;
     const fechaW = 7, objW = 7, matW = 24;
     const bRight = bx + fechaW + objW + matW;
@@ -1081,9 +1081,12 @@ async function generateInasistenciaSheet() {
       // marco
       doc.rect(ax, yBand, aRight - ax, yBottom - yBand);
       // líneas verticales
-      doc.line(ax + numW, yBand, ax + numW, yBottom);
+      const numX = ax + titW;                 // inicio columna de números
+      const gridX = numX + numW;              // inicio de las casillas de marca
+      doc.line(numX, yBand, numX, yBottom);   // separa título vertical / números
+      doc.line(gridX, yBand, gridX, yBottom); // separa números / casillas
       for (let c = 1; c <= MARK_COLS; c++) {
-        const x = ax + numW + c * markW;
+        const x = gridX + c * markW;
         doc.line(x, yBand, x, yBottom);
       }
       // líneas horizontales (banda + filas)
@@ -1092,19 +1095,19 @@ async function generateInasistenciaSheet() {
         const y = yBody + r * rowH;
         doc.line(ax, y, aRight, y);
       }
-      // etiqueta vertical "NÚMERO DE LISTA"
+      // etiqueta vertical "NÚMERO DE LISTA" (columna propia, toda la altura)
       doc.setFont('helvetica', 'bold'); doc.setFontSize(7);
-      rVTextCentered(doc, 'NÚMERO DE LISTA', ax, yBand, numW, bandH + rowH * 6);
+      rVTextCentered(doc, 'NÚMERO DE LISTA', ax, yBand, titW, yBottom - yBand);
       // fechas por columna (banda superior)
       doc.setFontSize(6.5);
       pageSessions.forEach((s, c) => {
-        const x = ax + numW + c * markW;
+        const x = gridX + c * markW;
         rVTextCentered(doc, fmtDate(s.date), x, yBand, markW, bandH);
       });
       // números 1..48
       doc.setFont('helvetica', 'normal'); doc.setFontSize(6);
       for (let r = 1; r <= LIST_ROWS; r++) {
-        doc.text(String(r), ax + numW / 2, yBody + (r - 0.5) * rowH + 1, { align: 'center' });
+        doc.text(String(r), numX + numW / 2, yBody + (r - 0.5) * rowH + 1, { align: 'center' });
       }
       // puntos de inasistencia
       doc.setFillColor(...BLACK);
@@ -1112,7 +1115,7 @@ async function generateInasistenciaSheet() {
         if (sIdx >= LIST_ROWS) return;
         pageSessions.forEach((s, c) => {
           if (getAbsentIds(s).includes(st.id)) {
-            const cxDot = ax + numW + (c + 0.5) * markW;
+            const cxDot = gridX + (c + 0.5) * markW;
             const cyDot = yBody + (sIdx + 0.5) * rowH;
             doc.circle(cxDot, cyDot, 0.8, 'F');
           }
