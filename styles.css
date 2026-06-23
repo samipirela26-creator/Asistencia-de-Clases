@@ -384,6 +384,13 @@ input, textarea, button, select { font-family: inherit; }
   user-select: none;
 }
 .attendance-student-row:last-child { border-bottom: none; }
+.attendance-student-row .att-list-num {
+  flex: 0 0 22px;
+  text-align: center;
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--c-text-soft, #6b7280);
+}
 .attendance-student-row .student-name { flex: 1; font-weight: 500; font-size: 14px; color: var(--c-text); }
 .attendance-student-row.absent {
   background: var(--c-red-bg);

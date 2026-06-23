@@ -1132,6 +1132,7 @@ function renderAttendanceStudents() {
     const bg = AVATAR_COLORS[i % AVATAR_COLORS.length];
     return `
       <div class="attendance-student-row" id="att-item-${s.id}" onclick="toggleAbsent('${s.id}')">
+        <span class="att-list-num">${i + 1}</span>
         <div class="aa-avatar sm" id="att-avatar-${s.id}" style="background:${bg}">${initials(s.name)}</div>
         <span class="student-name">${esc(s.name)}</span>
         <span class="aa-badge present" id="att-status-${s.id}">✓ Presente</span>
