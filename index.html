@@ -207,7 +207,6 @@
       <!-- Sección: Mis Salones -->
       <div class="section-head">
         <span class="sec-title">Mis Salones</span>
-        <span class="sec-action" onclick="navigateTo('classrooms')">Ver todos →</span>
       </div>
       <div class="classrooms-grid" id="home-classrooms"></div>
       <div id="home-empty" class="hidden" style="padding:0 16px 16px;">
@@ -321,7 +320,7 @@
     <!-- Dark header -->
     <div class="dark-header" id="detail-dark-header">
       <div class="topbar">
-        <button class="iconbtn btn-back" onclick="navigateTo('classrooms')">←</button>
+        <button class="iconbtn btn-back" onclick="navigateTo('home')">←</button>
         <div style="display:flex;gap:4px;">
           <button class="iconbtn" onclick="navigateTo('projection')" title="Proyectar">📽️</button>
           <button class="iconbtn" onclick="openQRModal()" title="QR del salón">📱</button>
@@ -780,11 +779,6 @@
     <div class="nav-item active" data-view="home" onclick="navigateTo('home')">
       <div class="nav-icon">🏠</div>
       <div class="nav-label">Inicio</div>
-      <div class="nav-dot"></div>
-    </div>
-    <div class="nav-item" data-view="classrooms" onclick="navigateTo('classrooms')">
-      <div class="nav-icon">🏫</div>
-      <div class="nav-label">Salones</div>
       <div class="nav-dot"></div>
     </div>
     <div class="nav-item" data-view="stats" onclick="navigateTo('stats')">

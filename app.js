@@ -195,9 +195,9 @@ function navigateTo(viewName, data = null) {
   const navItem = document.querySelector(`.nav-item[data-view="${viewName}"]`);
   if (navItem) navItem.classList.add('active');
 
-  // FAB — solo en Salones y Home
+  // FAB — solo en Home
   const fab = document.getElementById('fab');
-  if (fab) fab.classList.toggle('hidden', !['classrooms','home'].includes(viewName));
+  if (fab) fab.classList.toggle('hidden', viewName !== 'home');
 
   // Save bar — solo en Tomar Asistencia
   const savebar = document.getElementById('btn-save-attendance');
@@ -319,7 +319,7 @@ let _projUnsub = null; // listener Firestore activo
 
 function loadProjectionView() {
   const cls = state.currentClassroom;
-  if (!cls) { navigateTo('classrooms'); return; }
+  if (!cls) { navigateTo('home'); return; }
 
   // Rellenar encabezado
   const nameEl = document.getElementById('proj-classroom-name');
@@ -558,8 +558,7 @@ function renderHomeClassrooms() {
   }
   empty?.classList.add('hidden');
 
-  const visible = state.classrooms.slice(0, 6);
-  container.innerHTML = visible.map(c => classroomGridCardHTML(c)).join('');
+  container.innerHTML = state.classrooms.map(c => classroomGridCardHTML(c)).join('');
 }
 
 function classroomGridCardHTML(c) {
@@ -1467,8 +1466,8 @@ function confirmDeleteClassroom(classroom) {
 
         closeModal('modal-confirm');
         showToast('Salón eliminado');
-        // Si lo borramos desde el detalle, volver a la lista; si no, quedarse.
-        if (fromDetail) navigateTo('classrooms');
+        // Si lo borramos desde el detalle, volver al inicio; si no, quedarse.
+        if (fromDetail) navigateTo('home');
       } catch (e) {
         console.error(e);
         showToast('Error al eliminar');
@@ -1877,7 +1876,7 @@ function importBackup(input) {
       }
 
       showToast(`Restaurados ${restored} salones ✓`);
-      navigateTo('classrooms');
+      navigateTo('home');
     } catch (e) {
       console.error('[Respaldo] Error al restaurar:', e);
       showToast('No se pudo restaurar el respaldo');
