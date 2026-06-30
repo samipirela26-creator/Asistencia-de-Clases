@@ -18,6 +18,12 @@ const state = {
   lateIds:          new Set(),
   importBuffer:     [],
   unsubClassrooms:  null,
+  // Salón al que realmente pertenecen state.students/state.sessions ahora
+  // mismo. Distinto de currentClassroom.id mientras loadStudents/loadSessions
+  // todavía no terminan de cargar tras cambiar de salón — evita que reportes
+  // (rFetchData) usen datos viejos de otro salón durante esa ventana.
+  studentsDataFor:  null,
+  sessionsDataFor:  null,
 };
 
 // Paleta — coincide con STRIPE_COLORS del prototipo
@@ -235,7 +241,12 @@ function navigateTo(viewName, data = null) {
         state.currentClassroom = cls;
         renderClassroomDetailHeader(cls);
         if (data) {
-          // Navegación explícita a un salón: reset completo
+          // Navegación explícita a un salón: reset completo. Limpiar las
+          // banderas de "datos cargados para X" para que reportes (rFetchData)
+          // no reutilicen por error los datos del salón anterior mientras
+          // este todavía está cargando.
+          if (state.studentsDataFor !== cls.id) state.studentsDataFor = null;
+          if (state.sessionsDataFor !== cls.id) state.sessionsDataFor = null;
           switchSegment('students');
           loadClassroomDetail(cls.id);
         } else {
@@ -707,6 +718,7 @@ async function loadStudents(classroomId) {
     // mientras cargaba, ignorar este resultado (era de otro salón).
     if (state.currentClassroom && state.currentClassroom.id !== classroomId) return;
     state.students = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    state.studentsDataFor = classroomId;
     renderStudentsList();
     syncStudentCount(classroomId, state.students.length);
   } catch (e) { console.error('Error estudiantes:', e); }
@@ -971,6 +983,7 @@ async function loadSessions(classroomId) {
     // mientras cargaba, ignorar este resultado (era de otro salón).
     if (state.currentClassroom && state.currentClassroom.id !== classroomId) return;
     state.sessions = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    state.sessionsDataFor = classroomId;
     renderSessionsList();
     syncLastSessionISO(classroomId);
   } catch (e) { console.error('Error sesiones:', e); }

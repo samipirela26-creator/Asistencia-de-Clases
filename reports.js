@@ -96,7 +96,14 @@ async function rFetchData(classroomId, allSessions = false) {
   // Reusar los datos ya cargados del salón abierto (ahorra 50-200 lecturas
   // por reporte). state.students viene ordenado por nombre y state.sessions
   // desc por fecha — aquí se necesita asc, así que se reordena una copia.
+  // OJO: no basta con comparar currentClassroom.id — justo después de cambiar
+  // de salón, currentClassroom.id ya es el nuevo pero state.students/sessions
+  // pueden seguir siendo los del salón anterior mientras loadStudents/
+  // loadSessions terminan de cargar (carrera). studentsDataFor/sessionsDataFor
+  // solo se actualizan cuando esos datos realmente corresponden al salón.
   if (state.currentClassroom?.id === classroomId
+      && state.studentsDataFor === classroomId
+      && state.sessionsDataFor === classroomId
       && state.students.length && state.sessions.length) {
     return {
       students: [...state.students],
