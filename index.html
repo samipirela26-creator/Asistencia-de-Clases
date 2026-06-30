@@ -1459,10 +1459,24 @@ if ('serviceWorker' in navigator) {
           const newWorker = reg.installing;
           newWorker.addEventListener('statechange', () => {
             if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-              // Hay una actualización — notificar al usuario
+              // No interrumpir si el usuario está tomando asistencia (o tiene
+              // cambios sin guardar): un reload a mitad de un guardado en
+              // Firestore puede cortar la conexión y mostrar errores como
+              // "client has already been terminated". Se reintenta más tarde.
+              const guarded = ['take-attendance', 'swipe-attendance'];
+              const busy = typeof state !== 'undefined'
+                && guarded.includes(state.currentView)
+                && typeof attendanceHasChanges === 'function'
+                && attendanceHasChanges();
+              if (busy) { return; }
+
+              // Hay una actualización — notificar al usuario.
+              // Importante: NO recargar aquí mismo. Solo se activa el SW
+              // nuevo; el reload real lo dispara 'controllerchange' una vez
+              // que el nuevo SW ya tomó control, evitando cortar a medio
+              // camino cualquier operación de Firestore en curso.
               if (confirm('¡Nueva versión disponible! ¿Actualizar ahora?')) {
                 newWorker.postMessage({ type: 'SKIP_WAITING' });
-                window.location.reload();
               }
             }
           });

@@ -58,6 +58,19 @@ let db   = null;
 let auth = null;
 let currentUser = null; // usuario autenticado
 
+// Detecta el error de Firestore "client has already been terminated":
+// pasa cuando la conexión murió (típicamente porque la app se actualizó
+// sola en segundo plano) y hay que recargar para reconectar.
+function isClientTerminatedError(e) {
+  const msg = (e && e.message) || '';
+  return /already been terminated|client is offline/i.test(msg);
+}
+function showClientTerminatedToast() {
+  showToast('⚠️ La app se actualizó — toca aquí para recargar');
+  const el = document.getElementById('toast');
+  if (el) el.onclick = () => window.location.reload();
+}
+
 // ════════════════════════════════════
 // INIT
 // ════════════════════════════════════
@@ -1252,13 +1265,15 @@ async function saveAttendance() {
       sessionData.updatedAt = firebase.firestore.FieldValue.serverTimestamp();
       sessionsCol.doc(editingSession.id).update(sessionData).catch(err => {
         console.error('[Sync] Error al actualizar asistencia:', err);
-        if (navigator.onLine) showToast('⚠️ No se pudo sincronizar — revisa la conexión e inténtalo de nuevo');
+        if (isClientTerminatedError(err)) { showClientTerminatedToast(); }
+        else if (navigator.onLine) showToast('⚠️ No se pudo sincronizar — revisa la conexión e inténtalo de nuevo');
       });
       editingSession = null;
     } else {
       sessionsCol.doc().set(sessionData).catch(err => {
         console.error('[Sync] Error al sincronizar asistencia:', err);
-        if (navigator.onLine) showToast('⚠️ No se pudo sincronizar — revisa la conexión e inténtalo de nuevo');
+        if (isClientTerminatedError(err)) { showClientTerminatedToast(); }
+        else if (navigator.onLine) showToast('⚠️ No se pudo sincronizar — revisa la conexión e inténtalo de nuevo');
       });
     }
 

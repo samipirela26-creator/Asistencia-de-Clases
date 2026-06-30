@@ -389,7 +389,11 @@ async function generateWeeklyPDF() {
     rFooter(doc);
     doc.save(`Semanal_${rSafeFilename(cls.name)}_${weekStartISO}.pdf`);
     showToast('Resumen semanal PDF descargado ✓');
-  } catch (e) { console.error(e); showToast('Error: ' + e.message); }
+  } catch (e) {
+    console.error(e);
+    if (typeof isClientTerminatedError === 'function' && isClientTerminatedError(e)) showClientTerminatedToast();
+    else showToast('Error: ' + e.message);
+  }
 }
 
 
@@ -456,7 +460,11 @@ async function generateWeeklyExcel() {
 
     XLSX.writeFile(wb, `Semanal_${rSafeFilename(cls.name)}_${weekStartISO}.xlsx`);
     showToast('Excel semanal descargado ✓');
-  } catch (e) { console.error(e); showToast('Error: ' + e.message); }
+  } catch (e) {
+    console.error(e);
+    if (typeof isClientTerminatedError === 'function' && isClientTerminatedError(e)) showClientTerminatedToast();
+    else showToast('Error: ' + e.message);
+  }
 }
 
 
@@ -537,7 +545,11 @@ async function generateMonthlyPDF() {
     rFooter(doc);
     doc.save(`Mensual_${rSafeFilename(cls.name)}_${year}_${String(month+1).padStart(2,'0')}.pdf`);
     showToast('Reporte mensual PDF descargado ✓');
-  } catch (e) { console.error(e); showToast('Error: ' + e.message); }
+  } catch (e) {
+    console.error(e);
+    if (typeof isClientTerminatedError === 'function' && isClientTerminatedError(e)) showClientTerminatedToast();
+    else showToast('Error: ' + e.message);
+  }
 }
 
 
@@ -593,7 +605,11 @@ async function generateMonthlyExcel() {
 
     XLSX.writeFile(wb, `Mensual_${rSafeFilename(cls.name)}_${year}_${String(month+1).padStart(2,'0')}.xlsx`);
     showToast('Excel mensual descargado ✓');
-  } catch (e) { console.error(e); showToast('Error: ' + e.message); }
+  } catch (e) {
+    console.error(e);
+    if (typeof isClientTerminatedError === 'function' && isClientTerminatedError(e)) showClientTerminatedToast();
+    else showToast('Error: ' + e.message);
+  }
 }
 
 
@@ -691,7 +707,11 @@ async function generateStudentReportPDF(studentId) {
     rFooter(doc);
     doc.save(`Alumno_${rSafeFilename(student.name)}_${rFileDate()}.pdf`);
     showToast('Reporte de alumno descargado ✓');
-  } catch (e) { console.error(e); showToast('Error: ' + e.message); }
+  } catch (e) {
+    console.error(e);
+    if (typeof isClientTerminatedError === 'function' && isClientTerminatedError(e)) showClientTerminatedToast();
+    else showToast('Error: ' + e.message);
+  }
 }
 
 
@@ -785,7 +805,11 @@ async function generateLowAttendanceReport() {
     rFooter(doc);
     doc.save(`Alertas_${rSafeFilename(cls.name)}_${rFileDate()}.pdf`);
     showToast('Reporte de alertas descargado ✓');
-  } catch (e) { console.error(e); showToast('Error: ' + e.message); }
+  } catch (e) {
+    console.error(e);
+    if (typeof isClientTerminatedError === 'function' && isClientTerminatedError(e)) showClientTerminatedToast();
+    else showToast('Error: ' + e.message);
+  }
 }
 
 
@@ -868,7 +892,11 @@ async function generateAbsenceRankingReport() {
     rFooter(doc);
     doc.save(`Ranking_Faltas_${rSafeFilename(cls.name)}_${rFileDate()}.pdf`);
     showToast('Ranking de faltas descargado ✓');
-  } catch (e) { console.error(e); showToast('Error: ' + e.message); }
+  } catch (e) {
+    console.error(e);
+    if (typeof isClientTerminatedError === 'function' && isClientTerminatedError(e)) showClientTerminatedToast();
+    else showToast('Error: ' + e.message);
+  }
 }
 
 
@@ -945,7 +973,11 @@ async function generateFullExport() {
 
     XLSX.writeFile(wb, `Exportacion_${rSafeFilename(cls.name)}_${rFileDate()}.xlsx`);
     showToast('Exportación completa descargada ✓');
-  } catch (e) { console.error(e); showToast('Error: ' + e.message); }
+  } catch (e) {
+    console.error(e);
+    if (typeof isClientTerminatedError === 'function' && isClientTerminatedError(e)) showClientTerminatedToast();
+    else showToast('Error: ' + e.message);
+  }
 }
 
 
@@ -1100,7 +1132,11 @@ async function generateBlankAttendancePDF() {
 
     doc.save(`ListaEnBlanco_${rSafeFilename(cls.name)}_${rFileDate()}.pdf`);
     showToast('Lista en blanco descargada ✓');
-  } catch (e) { console.error(e); showToast('Error: ' + e.message); }
+  } catch (e) {
+    console.error(e);
+    if (typeof isClientTerminatedError === 'function' && isClientTerminatedError(e)) showClientTerminatedToast();
+    else showToast('Error: ' + e.message);
+  }
 }
 
 // ════════════════════════════════════════════════════════════
@@ -1321,7 +1357,11 @@ async function generateInasistenciaSheet() {
 
     doc.save(`Inasistencia_${rSafeFilename(cls.name)}_${rFileDate()}.pdf`);
     showToast('Hoja de inasistencia descargada ✓');
-  } catch (e) { console.error(e); showToast('Error: ' + e.message); }
+  } catch (e) {
+    console.error(e);
+    if (typeof isClientTerminatedError === 'function' && isClientTerminatedError(e)) showClientTerminatedToast();
+    else showToast('Error: ' + e.message);
+  }
 }
 
 // barra de título reutilizable en una posición y arbitraria
