@@ -814,7 +814,7 @@
       <div class="rpt-section-title">Reportes rápidos</div>
       <div style="padding:0 16px;display:flex;flex-direction:column;gap:10px;">
 
-        <div class="rpt-card" onclick="generateInasistenciaSheet()">
+        <div class="rpt-card" onclick="openInasistenciaPeriodo()">
           <div class="rpt-card-icon" style="background:#EEF2FF;color:#4338CA;">📋</div>
           <div class="rpt-card-body">
             <div class="rpt-card-name">Hoja de Inasistencia</div>
@@ -837,6 +837,15 @@
           <div class="rpt-card-body">
             <div class="rpt-card-name">Reporte de Alertas</div>
             <div class="rpt-card-desc">Alumnos con bajo rendimiento · PDF</div>
+          </div>
+          <div class="rpt-card-arrow">↓ PDF</div>
+        </div>
+
+        <div class="rpt-card" onclick="generateAbsenceRankingReport()">
+          <div class="rpt-card-icon" style="background:#FEF2F2;color:#B91C1C;">📊</div>
+          <div class="rpt-card-body">
+            <div class="rpt-card-name">Ranking de Faltas</div>
+            <div class="rpt-card-desc">Cuántas veces ha faltado cada alumno · histórico · PDF</div>
           </div>
           <div class="rpt-card-arrow">↓ PDF</div>
         </div>
@@ -1293,6 +1302,34 @@
       <div class="sheet-foot">
         <button class="aa-btn-outline" onclick="closeModal('modal-classroom')">Cancelar</button>
         <button class="aa-btn" onclick="saveClassroom()">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════
+       MODAL: Periodo de clase — Hoja de Inasistencia
+       ════════════════════════════════════════════ -->
+  <div id="modal-inasistencia-periodo" class="modal-overlay">
+    <div class="aa-sheet">
+      <div class="sheet-handle"></div>
+      <div class="sheet-head">
+        <span class="sheet-title">Periodo de clase</span>
+        <button class="sheet-close" onclick="closeModal('modal-inasistencia-periodo')">✕</button>
+      </div>
+      <div class="sheet-body">
+        <div class="aa-field">
+          <label>Desde</label>
+          <input type="date" class="aa-input" id="inas-from" />
+        </div>
+        <div class="aa-field">
+          <label>Hasta</label>
+          <input type="date" class="aa-input" id="inas-to" />
+        </div>
+        <span class="aa-hint">Se incluirán las clases registradas dentro de este periodo. Déjalo vacío para incluir todas.</span>
+      </div>
+      <div class="sheet-foot">
+        <button class="aa-btn-outline" onclick="closeModal('modal-inasistencia-periodo')">Cancelar</button>
+        <button class="aa-btn" onclick="generateInasistenciaSheet()">Generar hoja</button>
       </div>
     </div>
   </div>

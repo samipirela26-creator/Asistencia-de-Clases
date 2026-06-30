@@ -780,6 +780,59 @@ async function generateLowAttendanceReport() {
 
 
 // ════════════════════════════════════════════════════════════
+// 7.5 RANKING DE FALTAS POR ALUMNO (histórico completo)
+// ════════════════════════════════════════════════════════════
+async function generateAbsenceRankingReport() {
+  if (!state.currentClassroom) { showToast('Selecciona un salón'); return; }
+  showToast('Generando ranking de faltas…');
+  try {
+    const cls = state.currentClassroom;
+    const { students, sessions } = await rFetchData(cls.id);
+    if (sessions.length === 0) { showToast('No hay sesiones registradas'); return; }
+
+    const studData = students.map(st => {
+      const ab = sessions.filter(s => getAbsentIds(s).includes(st.id)).length;
+      const pct = rPct(sessions.length - ab, sessions.length);
+      return { ...st, absences: ab, presents: sessions.length - ab, pct };
+    }).sort((a, b) => b.absences - a.absences);
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+
+    rHeader(doc, 'Ranking de Faltas por Alumno', new Date().toLocaleDateString('es-ES'));
+    let y = rClassroomBlock(doc, cls, 38);
+
+    doc.setFillColor(...R_LIGHT);
+    doc.roundedRect(14, y, 182, 10, 3, 3, 'F');
+    doc.setTextColor(...R_DARK); doc.setFontSize(9); doc.setFont('helvetica','bold');
+    doc.text(`Historial completo · ${sessions.length} clase${sessions.length !== 1 ? 's' : ''} registrada${sessions.length !== 1 ? 's' : ''}`, 105, y + 6.5, { align: 'center' });
+    y += 16;
+
+    doc.autoTable({
+      head: [['#', 'Alumno', 'Faltas', 'Presencias', 'Asistencia %']],
+      body: studData.map((st, i) => [i + 1, st.name, st.absences, st.presents, st.pct + '%']),
+      startY: y,
+      margin: { left: 14, right: 14 },
+      headStyles: { fillColor: R_PRIMARY, textColor: R_WHITE, fontSize: 9, fontStyle: 'bold' },
+      bodyStyles: { fontSize: 9, textColor: R_DARK },
+      alternateRowStyles: { fillColor: R_LIGHT },
+      columnStyles: { 0:{cellWidth:10,halign:'center'}, 2:{cellWidth:24,halign:'center'}, 3:{cellWidth:26,halign:'center'}, 4:{cellWidth:28,halign:'center'} },
+      didParseCell(data) {
+        if (data.section === 'body') {
+          if (data.column.index === 2) { data.cell.styles.textColor = R_RED; data.cell.styles.fontStyle = 'bold'; }
+          if (data.column.index === 4) { const p=parseInt(data.cell.raw); if(!isNaN(p)) data.cell.styles.textColor = rColorPct(p); }
+        }
+      },
+    });
+
+    rFooter(doc);
+    doc.save(`Ranking_Faltas_${rSafeFilename(cls.name)}_${rFileDate()}.pdf`);
+    showToast('Ranking de faltas descargado ✓');
+  } catch (e) { console.error(e); showToast('Error: ' + e.message); }
+}
+
+
+// ════════════════════════════════════════════════════════════
 // 8. EXPORTACIÓN COMPLETA EXCEL
 // ════════════════════════════════════════════════════════════
 async function generateFullExport() {
@@ -1024,12 +1077,36 @@ function rVTextCentered(doc, text, x, y, w, h) {
   doc.text(text, cx, cy, { angle: 90 });
 }
 
+function openInasistenciaPeriodo() {
+  if (!state.currentClassroom) { showToast('Selecciona un salón'); return; }
+  const f = document.getElementById('inas-from');
+  const t = document.getElementById('inas-to');
+  if (f) f.value = '';
+  if (t) t.value = '';
+  openModal('modal-inasistencia-periodo');
+}
+
 async function generateInasistenciaSheet() {
   if (!state.currentClassroom) { showToast('Selecciona un salón'); return; }
+  closeModal('modal-inasistencia-periodo');
+  // Periodo seleccionado (opcional)
+  const fromEl = document.getElementById('inas-from');
+  const toEl   = document.getElementById('inas-to');
+  const fromTs = fromEl && fromEl.value ? new Date(fromEl.value + 'T00:00:00').getTime() : null;
+  const toTs   = toEl && toEl.value ? new Date(toEl.value + 'T23:59:59').getTime() : null;
   showToast('Generando hoja de inasistencia…');
   try {
     const cls = state.currentClassroom;
-    const { students, sessions } = await rFetchData(cls.id); // sessions asc por fecha
+    let { students, sessions } = await rFetchData(cls.id); // sessions asc por fecha
+    // Filtrar por periodo de clase si se indicó
+    if (fromTs || toTs) {
+      sessions = sessions.filter(s => {
+        const t = tsToDate(s.date).getTime();
+        if (fromTs && t < fromTs) return false;
+        if (toTs && t > toTs) return false;
+        return true;
+      });
+    }
 
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'letter' });
