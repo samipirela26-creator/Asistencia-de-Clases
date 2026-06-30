@@ -1188,9 +1188,21 @@ function updateAbsentCount() {
 async function saveAttendance() {
   if (!state.currentClassroom) { showToast('Sin salón seleccionado'); return; }
 
-  const dateVal = document.getElementById('attendance-date').value;
-  const topic   = document.getElementById('attendance-topic').value.trim();
-  const notes   = document.getElementById('attendance-notes').value.trim();
+  // Leer los campos de forma defensiva: si el DOM no está listo (re-render
+  // tardío, vista recién montada, etc.) esto antes tronaba en silencio y
+  // el botón "Guardar" no hacía nada sin avisar. Ahora se detecta y se
+  // pide reintentar en vez de fallar mudo.
+  const dateEl  = document.getElementById('attendance-date');
+  const topicEl = document.getElementById('attendance-topic');
+  const notesEl = document.getElementById('attendance-notes');
+  if (!dateEl || !topicEl || !notesEl) {
+    showToast('⚠️ La pantalla no cargó bien — vuelve a abrir "Tomar Asistencia" e inténtalo de nuevo');
+    return;
+  }
+
+  const dateVal = dateEl.value;
+  const topic   = topicEl.value.trim();
+  const notes   = notesEl.value.trim();
 
   if (!dateVal) { markFieldInvalid('attendance-date', '⚠️ Selecciona la fecha'); return; }
   if (!topic)   { markFieldInvalid('attendance-topic', '⚠️ Falta el tema de la clase'); return; }
