@@ -66,9 +66,15 @@ function isClientTerminatedError(e) {
   return /already been terminated|client is offline/i.test(msg);
 }
 function showClientTerminatedToast() {
-  showToast('⚠️ La app se actualizó — toca aquí para recargar');
+  // Duración larga (10s) y pointer-events habilitado vía .clickable —
+  // el toast normal tiene pointer-events:none en CSS, por eso antes
+  // "tocar aquí" no hacía nada.
+  showToast('⚠️ La app se actualizó — toca aquí para recargar', 10000);
   const el = document.getElementById('toast');
-  if (el) el.onclick = () => window.location.reload();
+  if (el) {
+    el.classList.add('clickable');
+    el.onclick = () => window.location.reload();
+  }
 }
 
 // ════════════════════════════════════
@@ -1703,13 +1709,17 @@ function showConfirm(title, message, onConfirm, okLabel = 'Eliminar') {
 // TOAST
 // ════════════════════════════════════
 let toastTimer = null;
-function showToast(msg) {
+function showToast(msg, duration = 3200) {
   const el = document.getElementById('toast');
   if (!el) return;
   el.textContent = msg;
   el.classList.add('show');
+  // Limpia handler/clase de toasts clickeables anteriores (p.ej. el de
+  // "la app se actualizó") para que un toast normal no quede clickeable.
+  el.onclick = null;
+  el.classList.remove('clickable');
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => el.classList.remove('show'), 3200);
+  toastTimer = setTimeout(() => el.classList.remove('show'), duration);
 }
 
 // Marca un campo obligatorio en rojo, lo enfoca y muestra el motivo

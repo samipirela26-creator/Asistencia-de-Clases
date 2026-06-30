@@ -652,6 +652,7 @@ textarea#student-name {
   pointer-events: none; white-space: nowrap;
 }
 #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+#toast.clickable { pointer-events: auto; cursor: pointer; text-decoration: underline; }
 
 /* ── File drop ──────────────────────────────────────────────── */
 .aa-drop {
