@@ -36,6 +36,12 @@
     <span>📡 Sin conexión · Datos en caché disponibles</span>
   </div>
 
+  <!-- Update banner: no bloqueante — se actualiza solo cuando el usuario
+       toca el botón, nunca a la fuerza a mitad de una acción -->
+  <div id="update-banner" class="offline-banner hidden" style="background:#1d2b6b;cursor:pointer;" onclick="applyAppUpdate()">
+    <span>⬆️ Nueva versión disponible · toca para actualizar</span>
+  </div>
+
   <!-- ════════════════════════════════════════════
        F7 · LOGIN
        ════════════════════════════════════════════ -->
@@ -1454,30 +1460,18 @@ if ('serviceWorker' in navigator) {
       .then(reg => {
         console.log('[PWA] Service Worker registrado:', reg.scope);
 
-        // Detectar nueva versión disponible
+        // Detectar nueva versión disponible. No se fuerza nada automático:
+        // ni confirm() ni reload. Solo se activa el SW nuevo en segundo
+        // plano y se muestra un banner — el usuario decide cuándo tocar
+        // "Actualizar". Forzar un reload a mitad de una acción (guardar
+        // asistencia, generar un PDF, etc.) cortaba la conexión a Firestore
+        // y producía el error "client has already been terminated".
         reg.addEventListener('updatefound', () => {
           const newWorker = reg.installing;
           newWorker.addEventListener('statechange', () => {
             if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-              // No interrumpir si el usuario está tomando asistencia (o tiene
-              // cambios sin guardar): un reload a mitad de un guardado en
-              // Firestore puede cortar la conexión y mostrar errores como
-              // "client has already been terminated". Se reintenta más tarde.
-              const guarded = ['take-attendance', 'swipe-attendance'];
-              const busy = typeof state !== 'undefined'
-                && guarded.includes(state.currentView)
-                && typeof attendanceHasChanges === 'function'
-                && attendanceHasChanges();
-              if (busy) { return; }
-
-              // Hay una actualización — notificar al usuario.
-              // Importante: NO recargar aquí mismo. Solo se activa el SW
-              // nuevo; el reload real lo dispara 'controllerchange' una vez
-              // que el nuevo SW ya tomó control, evitando cortar a medio
-              // camino cualquier operación de Firestore en curso.
-              if (confirm('¡Nueva versión disponible! ¿Actualizar ahora?')) {
-                newWorker.postMessage({ type: 'SKIP_WAITING' });
-              }
+              newWorker.postMessage({ type: 'SKIP_WAITING' });
+              document.getElementById('update-banner')?.classList.remove('hidden');
             }
           });
         });
@@ -1485,10 +1479,15 @@ if ('serviceWorker' in navigator) {
       .catch(err => console.warn('[PWA] Error registrando SW:', err));
   });
 
-  // Recargar cuando el SW nuevo tome control
+  // Recargar SOLO cuando el usuario toca el banner de actualización
+  // (ver applyAppUpdate() en app.js). controllerchange ya no dispara un
+  // reload automático — eso era lo que cortaba operaciones en curso.
   let refreshing = false;
   navigator.serviceWorker.addEventListener('controllerchange', () => {
-    if (!refreshing) { refreshing = true; window.location.reload(); }
+    if (window._awaitingAppUpdateReload && !refreshing) {
+      refreshing = true;
+      window.location.reload();
+    }
   });
 
   // Chequeo activo de actualizaciones: si la app se queda abierta horas/días

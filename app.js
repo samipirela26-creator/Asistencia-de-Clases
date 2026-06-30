@@ -3186,6 +3186,8 @@ async function forceAppUpdate() {
 
     await reg.update(); // re-descarga service-worker.js del servidor
 
+    window._awaitingAppUpdateReload = true; // acción explícita del usuario: sí se permite recargar
+
     const newSW = reg.waiting || reg.installing;
     if (newSW) {
       // Hay versión nueva: activarla. El listener 'controllerchange'
@@ -3209,6 +3211,17 @@ async function forceAppUpdate() {
   } catch (e) {
     showToast('Error al actualizar: ' + e.message);
   }
+}
+
+// Se llama al tocar el banner "Nueva versión disponible". El SW nuevo ya
+// quedó activado (SKIP_WAITING) cuando se detectó; aquí solo se autoriza
+// y dispara el reload — siempre por una acción explícita del usuario,
+// nunca a la fuerza a mitad de un guardado o de generar un PDF.
+function applyAppUpdate() {
+  window._awaitingAppUpdateReload = true;
+  document.getElementById('update-banner')?.classList.add('hidden');
+  showToast('Actualizando…');
+  setTimeout(() => window.location.reload(), 300);
 }
 
 // ════════════════════════════════════
