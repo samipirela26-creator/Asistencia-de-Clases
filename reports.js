@@ -830,6 +830,34 @@ async function generateAbsenceRankingReport() {
       },
     });
 
+    // Segunda tabla: ranking real, de quien más faltó a quien menos,
+    // incluyendo a TODOS los alumnos aunque tengan 0 faltas.
+    let y2 = (doc.previousAutoTable?.finalY || y) + 14;
+    if (y2 > 250) { doc.addPage(); y2 = 20; }
+
+    const ranked = [...studData].sort((a, b) => b.absences - a.absences);
+
+    doc.setFontSize(11); doc.setFont('helvetica','bold'); doc.setTextColor(...R_DARK);
+    doc.text('Ranking — de quien más faltó a quien menos:', 14, y2);
+    y2 += 6;
+
+    doc.autoTable({
+      head: [['#', 'Alumno', 'Faltas', 'Presencias', 'Asistencia %']],
+      body: ranked.map((st, i) => [i + 1, st.name, st.absences, st.presents, st.pct + '%']),
+      startY: y2,
+      margin: { left: 14, right: 14 },
+      headStyles: { fillColor: R_RED, textColor: R_WHITE, fontSize: 9, fontStyle: 'bold' },
+      bodyStyles: { fontSize: 9, textColor: R_DARK },
+      alternateRowStyles: { fillColor: [255, 245, 245] },
+      columnStyles: { 0:{cellWidth:10,halign:'center'}, 2:{cellWidth:24,halign:'center'}, 3:{cellWidth:26,halign:'center'}, 4:{cellWidth:28,halign:'center'} },
+      didParseCell(data) {
+        if (data.section === 'body') {
+          if (data.column.index === 2) { data.cell.styles.textColor = R_RED; data.cell.styles.fontStyle = 'bold'; }
+          if (data.column.index === 4) { const p=parseInt(data.cell.raw); if(!isNaN(p)) data.cell.styles.textColor = rColorPct(p); }
+        }
+      },
+    });
+
     rFooter(doc);
     doc.save(`Ranking_Faltas_${rSafeFilename(cls.name)}_${rFileDate()}.pdf`);
     showToast('Ranking de faltas descargado ✓');
