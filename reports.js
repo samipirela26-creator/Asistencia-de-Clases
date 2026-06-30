@@ -219,10 +219,19 @@ async function generateEvacuationReport() {
     const cls   = state.currentClassroom;
     const today = todayISO();
 
-    const [studSnap, sessSnap] = await Promise.all([
+    const _fetchEvac = () => Promise.all([
       db.collection('classrooms').doc(cls.id).collection('students').orderBy('name').get(),
       db.collection('classrooms').doc(cls.id).collection('sessions').orderBy('date','desc').limit(5).get(),
     ]);
+    let studSnap, sessSnap;
+    try {
+      [studSnap, sessSnap] = await _fetchEvac();
+    } catch (e) {
+      if (typeof isClientTerminatedError === 'function' && isClientTerminatedError(e)
+          && typeof reconnectFirestore === 'function' && await reconnectFirestore()) {
+        [studSnap, sessSnap] = await _fetchEvac();
+      } else throw e;
+    }
     const allStudents = studSnap.docs.map(d => ({ id: d.id, ...d.data() }));
     if (allStudents.length === 0) { showToast('Este salón no tiene alumnos registrados'); return; }
 
@@ -307,7 +316,8 @@ async function generateEvacuationReport() {
     showToast('Reporte de evacuación descargado ✓');
   } catch (e) {
     console.error('[Evacuación]', e);
-    showToast('⚠️ Error al generar reporte de evacuación' + (e?.message ? ': ' + e.message : ' — revisa tu conexión'));
+    if (typeof isClientTerminatedError === 'function' && isClientTerminatedError(e)) showClientTerminatedToast();
+    else showToast('⚠️ Error al generar reporte de evacuación' + (e?.message ? ': ' + e.message : ' — revisa tu conexión'));
   }
 }
 
@@ -636,10 +646,19 @@ async function generateStudentReportPDF(studentId) {
   showToast('Generando reporte del alumno…');
   try {
     const cls = state.currentClassroom;
-    const [studDoc, sessSnap] = await Promise.all([
+    const _fetchStud = () => Promise.all([
       db.collection('classrooms').doc(cls.id).collection('students').doc(studentId).get(),
       db.collection('classrooms').doc(cls.id).collection('sessions').orderBy('date','asc').get(),
     ]);
+    let studDoc, sessSnap;
+    try {
+      [studDoc, sessSnap] = await _fetchStud();
+    } catch (e) {
+      if (typeof isClientTerminatedError === 'function' && isClientTerminatedError(e)
+          && typeof reconnectFirestore === 'function' && await reconnectFirestore()) {
+        [studDoc, sessSnap] = await _fetchStud();
+      } else throw e;
+    }
     if (!studDoc.exists) { showToast('Alumno no encontrado'); return; }
     const student  = { id: studDoc.id, ...studDoc.data() };
     const sessions = sessSnap.docs.map(d => ({ id: d.id, ...d.data() }));
