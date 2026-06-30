@@ -59,8 +59,9 @@ let auth = null;
 let currentUser = null; // usuario autenticado
 
 // Detecta el error de Firestore "client has already been terminated":
-// pasa cuando la conexión murió (típicamente porque la app se actualizó
-// sola en segundo plano) y hay que recargar para reconectar.
+// pasa cuando la conexión murió. En Safari/iOS es frecuente: WebKit mata
+// la conexión a IndexedDB cuando la pestaña pasa a segundo plano (bug
+// conocido de WebKit/Firestore-JS-SDK), y al volver el cliente queda inservible.
 function isClientTerminatedError(e) {
   const msg = (e && e.message) || '';
   return /already been terminated|client is offline/i.test(msg);
@@ -75,6 +76,35 @@ function showClientTerminatedToast() {
     el.classList.add('clickable');
     el.onclick = () => window.location.reload();
   }
+}
+
+// Reconecta Firestore sin recargar la página: crea un cliente nuevo y
+// reactiva la persistencia offline. Se usa como reintento automático
+// cuando isClientTerminatedError() detecta un cliente muerto (típico de
+// Safari/iOS al volver del segundo plano), para que el usuario no tenga
+// que recargar manualmente salvo que esto también falle.
+let _reconnectingFirestore = null;
+async function reconnectFirestore() {
+  if (_reconnectingFirestore) return _reconnectingFirestore;
+  _reconnectingFirestore = (async () => {
+    try {
+      db = firebase.firestore();
+      try {
+        await db.enablePersistence({ synchronizeTabs: true });
+      } catch (err) {
+        // failed-precondition (multi-tab) o unimplemented: no es fatal,
+        // seguimos sin persistencia offline en este reintento.
+      }
+      console.log('[Firestore] Reconectado tras cliente terminado ✓');
+      return true;
+    } catch (e) {
+      console.error('[Firestore] No se pudo reconectar:', e);
+      return false;
+    } finally {
+      _reconnectingFirestore = null;
+    }
+  })();
+  return _reconnectingFirestore;
 }
 
 // ════════════════════════════════════
@@ -1269,16 +1299,35 @@ async function saveAttendance() {
         .map(id => justifById[id] || id);
       delete sessionData.createdAt;
       sessionData.updatedAt = firebase.firestore.FieldValue.serverTimestamp();
-      sessionsCol.doc(editingSession.id).update(sessionData).catch(err => {
+      const _editingSessId = editingSession.id; // editingSession se pone en null más abajo;
+                                                 // el retry async necesita el id ya capturado.
+      const _classroomId   = state.currentClassroom.id;
+      sessionsCol.doc(_editingSessId).update(sessionData).catch(err => {
         console.error('[Sync] Error al actualizar asistencia:', err);
-        if (isClientTerminatedError(err)) { showClientTerminatedToast(); }
+        if (isClientTerminatedError(err)) {
+          // sessionsCol viene del cliente viejo (ya muerto) — tras
+          // reconectar hay que reconstruir la referencia con el db nuevo.
+          reconnectFirestore().then(ok => {
+            if (ok) {
+              db.collection('classrooms').doc(_classroomId).collection('sessions')
+                .doc(_editingSessId).update(sessionData).catch(() => showClientTerminatedToast());
+            } else showClientTerminatedToast();
+          });
+        }
         else if (navigator.onLine) showToast('⚠️ No se pudo sincronizar — revisa la conexión e inténtalo de nuevo');
       });
       editingSession = null;
     } else {
       sessionsCol.doc().set(sessionData).catch(err => {
         console.error('[Sync] Error al sincronizar asistencia:', err);
-        if (isClientTerminatedError(err)) { showClientTerminatedToast(); }
+        if (isClientTerminatedError(err)) {
+          reconnectFirestore().then(ok => {
+            if (ok) {
+              db.collection('classrooms').doc(state.currentClassroom.id).collection('sessions')
+                .doc().set(sessionData).catch(() => showClientTerminatedToast());
+            } else showClientTerminatedToast();
+          });
+        }
         else if (navigator.onLine) showToast('⚠️ No se pudo sincronizar — revisa la conexión e inténtalo de nuevo');
       });
     }

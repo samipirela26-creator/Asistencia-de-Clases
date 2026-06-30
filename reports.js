@@ -111,6 +111,21 @@ async function rFetchData(classroomId, allSessions = false) {
     };
   }
 
+  try {
+    return await _rFetchDataFromNetwork(classroomId);
+  } catch (e) {
+    // Cliente de Firestore muerto (común en Safari/iOS al volver de
+    // segundo plano) — reconectar y reintentar una vez antes de rendirse.
+    if (typeof isClientTerminatedError === 'function' && isClientTerminatedError(e)
+        && typeof reconnectFirestore === 'function') {
+      const ok = await reconnectFirestore();
+      if (ok) return await _rFetchDataFromNetwork(classroomId);
+    }
+    throw e;
+  }
+}
+
+async function _rFetchDataFromNetwork(classroomId) {
   let sessQ = db.collection('classrooms').doc(classroomId).collection('sessions').orderBy('date', 'asc');
   const [studSnap, sessSnap] = await Promise.all([
     db.collection('classrooms').doc(classroomId).collection('students').orderBy('name').get(),
