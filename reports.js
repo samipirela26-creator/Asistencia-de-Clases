@@ -202,6 +202,8 @@ async function generateEvacuationReport() {
       db.collection('classrooms').doc(cls.id).collection('sessions').orderBy('date','desc').limit(5).get(),
     ]);
     const allStudents = studSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    if (allStudents.length === 0) { showToast('Este salón no tiene alumnos registrados'); return; }
+
     const todaySess = sessSnap.docs.map(d => ({ id: d.id, ...d.data() }))
       .find(s => isoFromTimestamp(s.date) === today);
 
@@ -282,7 +284,8 @@ async function generateEvacuationReport() {
     doc.save(`Evacuacion_${rSafeFilename(cls.name)}_${today}.pdf`);
     showToast('Reporte de evacuación descargado ✓');
   } catch (e) {
-    console.error(e); showToast('Error al generar reporte: ' + e.message);
+    console.error('[Evacuación]', e);
+    showToast('⚠️ Error al generar reporte de evacuación' + (e?.message ? ': ' + e.message : ' — revisa tu conexión'));
   }
 }
 
