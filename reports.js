@@ -790,11 +790,13 @@ async function generateAbsenceRankingReport() {
     const { students, sessions } = await rFetchData(cls.id);
     if (sessions.length === 0) { showToast('No hay sesiones registradas'); return; }
 
+    // students ya viene ordenado por nombre (= número de lista de la planilla);
+    // no se reordena por cantidad de faltas para mantener ese orden.
     const studData = students.map(st => {
       const ab = sessions.filter(s => getAbsentIds(s).includes(st.id)).length;
       const pct = rPct(sessions.length - ab, sessions.length);
       return { ...st, absences: ab, presents: sessions.length - ab, pct };
-    }).sort((a, b) => b.absences - a.absences);
+    });
 
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
