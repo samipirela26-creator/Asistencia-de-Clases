@@ -1227,11 +1227,13 @@ async function saveAttendance() {
       sessionData.updatedAt = firebase.firestore.FieldValue.serverTimestamp();
       sessionsCol.doc(editingSession.id).update(sessionData).catch(err => {
         console.error('[Sync] Error al actualizar asistencia:', err);
+        if (navigator.onLine) showToast('⚠️ No se pudo sincronizar — revisa la conexión e inténtalo de nuevo');
       });
       editingSession = null;
     } else {
       sessionsCol.doc().set(sessionData).catch(err => {
         console.error('[Sync] Error al sincronizar asistencia:', err);
+        if (navigator.onLine) showToast('⚠️ No se pudo sincronizar — revisa la conexión e inténtalo de nuevo');
       });
     }
 

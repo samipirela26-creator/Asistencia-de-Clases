@@ -1476,6 +1476,18 @@ if ('serviceWorker' in navigator) {
   navigator.serviceWorker.addEventListener('controllerchange', () => {
     if (!refreshing) { refreshing = true; window.location.reload(); }
   });
+
+  // Chequeo activo de actualizaciones: si la app se queda abierta horas/días
+  // sin cerrarse del todo, el navegador no vuelve a revisar el SW por su
+  // cuenta — eso hacía que bugs ya corregidos siguieran apareciendo hasta
+  // cerrar y volver a entrar. Ahora se revisa al volver a la app y cada 10 min.
+  function checkForAppUpdate() {
+    navigator.serviceWorker.getRegistration().then(reg => reg && reg.update()).catch(() => {});
+  }
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') checkForAppUpdate();
+  });
+  setInterval(checkForAppUpdate, 10 * 60 * 1000);
 }
 
 // Mostrar la versión real (nombre de la caché del service worker) en el menú
